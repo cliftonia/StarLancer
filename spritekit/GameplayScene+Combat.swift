@@ -135,12 +135,52 @@ extension GameplayScene {
 
         if enemiesRemainingInWave <= 0 {
             waveInProgress = false
+            GameFeedback.success()
+            showWaveClearBanner()
+
             // Delay before next wave
             run(SKAction.sequence([
-                SKAction.wait(forDuration: 2.0),
+                SKAction.wait(forDuration: 3.0),
                 SKAction.run { [weak self] in self?.startNextWave() }
             ]))
         }
+    }
+
+    func showWaveClearBanner() {
+        let banner = SKNode()
+        banner.zPosition = 35
+        banner.alpha = 0
+
+        let text = SKLabelNode(fontNamed: "Helvetica-Bold")
+        text.text = "WAVE CLEAR"
+        text.fontSize = 28
+        text.fontColor = Theme.onGreen
+        text.position = CGPoint(x: size.width * 0.5, y: size.height * 0.55)
+        banner.addChild(text)
+
+        let bonus = SKLabelNode(fontNamed: Theme.captionFont)
+        bonus.text = "HULL \(health)%  SHIELD \(shieldHP)"
+        bonus.fontSize = 12
+        bonus.fontColor = Theme.creamWhite.withAlphaComponent(0.7)
+        bonus.position = CGPoint(x: size.width * 0.5, y: size.height * 0.55 - 25)
+        banner.addChild(bonus)
+
+        if currentWave < totalWaves {
+            let next = SKLabelNode(fontNamed: Theme.captionFont)
+            next.text = "NEXT WAVE INCOMING..."
+            next.fontSize = 10
+            next.fontColor = nasaOrange.withAlphaComponent(0.6)
+            next.position = CGPoint(x: size.width * 0.5, y: size.height * 0.55 - 45)
+            banner.addChild(next)
+        }
+
+        addChild(banner)
+        banner.run(SKAction.sequence([
+            SKAction.fadeIn(withDuration: 0.3),
+            SKAction.wait(forDuration: 2.0),
+            SKAction.fadeOut(withDuration: 0.5),
+            SKAction.removeFromParent()
+        ]))
     }
 
     func combatVictory() {

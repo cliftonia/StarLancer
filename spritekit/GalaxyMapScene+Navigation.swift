@@ -86,7 +86,10 @@ extension GalaxyMapScene {
             if planet.owner != .player && planet.owner != nil {
                 self.enterCombat(for: planet)
             } else {
-                // Unclaimed or player-owned — show info panel
+                // Collect resources and refuel at owned planets
+                if planet.owner == .player {
+                    self.collectFromPlanet(planet)
+                }
                 self.showPlanetInfo(planet)
             }
         }
@@ -218,6 +221,40 @@ extension GalaxyMapScene {
         planetInfoNode = nil
         selectionRing?.removeFromParent()
         selectedPlanetID = nil
+    }
+
+    // MARK: - Resource Collection & Refuel
+
+    func collectFromPlanet(_ planet: Planet) {
+        guard var p = gameState.planet(withID: planet.id), p.owner == .player else { return }
+
+        // Transfer planet's accumulated resources to player
+        let crCollected = p.credits
+        let minCollected = p.minerals
+
+        if crCollected > 0 || minCollected > 0 {
+            gameState.player.credits += crCollected
+            gameState.player.minerals += minCollected
+            p.credits = 0
+            p.minerals = 0
+            gameState.updatePlanet(p)
+
+            var parts: [String] = []
+            if crCollected > 0 { parts.append("+\(crCollected) CR") }
+            if minCollected > 0 { parts.append("+\(minCollected) MIN") }
+            showNotification("COLLECTED: \(parts.joined(separator: "  "))")
+        }
+
+        // Refuel at planets with factories (fuel depots)
+        if p.factories > 0 {
+            let fuelRestored = min(100 - gameState.player.fuel, Double(p.factories) * 10)
+            if fuelRestored > 0 {
+                gameState.player.fuel += fuelRestored
+                showNotification("REFUELED: +\(Int(fuelRestored)) FUEL")
+            }
+        }
+
+        updateHUD()
     }
 
     // MARK: - Claim Unclaimed Planet
