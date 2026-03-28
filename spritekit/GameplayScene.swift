@@ -32,6 +32,20 @@ class GameplayScene: SKScene, SKPhysicsContactDelegate {
     private let hullGray   = Theme.hullGray
     private let shieldBlue = Theme.shieldBlue
 
+    // MARK: - Combat Context
+
+    var combatContext: CombatContext?
+    var gameState: GameState?
+    var onCombatComplete: ((CombatResult) -> Void)?
+
+    private var currentWave: Int = 0
+    private var totalWaves: Int = 5
+    private var enemiesRemainingInWave: Int = 0
+    private var waveInProgress = false
+    private var waveLabel: SKLabelNode?
+    private var retreatButton: SKNode?
+    private var isWaveBased: Bool { combatContext != nil }
+
     // MARK: - Game State
 
     private var playerShip: SKNode!
@@ -72,9 +86,25 @@ class GameplayScene: SKScene, SKPhysicsContactDelegate {
         physicsWorld.gravity = .zero
         physicsWorld.contactDelegate = self
 
+        // Apply combat context if wave-based
+        if let ctx = combatContext {
+            totalWaves = ctx.waveCount
+            currentWave = 0
+        }
+
         buildPlayer()
         buildHUD()
+        buildWaveHUD()
+        buildRetreatButton()
         startGyroscope()
+
+        // Start first wave after brief delay
+        if isWaveBased {
+            run(SKAction.sequence([
+                SKAction.wait(forDuration: 1.5),
+                SKAction.run { [weak self] in self?.startNextWave() }
+            ]))
+        }
     }
 
     override func willMove(from view: SKView) {
@@ -340,6 +370,188 @@ class GameplayScene: SKScene, SKPhysicsContactDelegate {
         scoreLabel?.text = "\(score)"
         creditsLabel?.text = "CR \(credits)"
         speedLabel?.text = String(format: "SPD %.1f", shipSpeed)
+    }
+
+    // MARK: - Wave HUD
+
+    private func buildWaveHUD() {
+        guard isWaveBased else { return }
+
+        let wl = SKLabelNode(fontNamed: "Courier-Bold")
+        wl.text = ""
+        wl.fontSize = 14
+        wl.fontColor = creamWhite
+        wl.horizontalAlignmentMode = .center
+        wl.verticalAlignmentMode = .center
+        wl.position = CGPoint(x: size.width * 0.5, y: size.height - 50)
+        wl.zPosition = 40
+        waveLabel = wl
+        addChild(wl)
+
+        // Planet name being contested
+        if let ctx = combatContext {
+            let targetLabel = SKLabelNode(fontNamed: "Courier")
+            targetLabel.text = "ENGAGING: \(ctx.targetPlanetName)"
+            targetLabel.fontSize = 10
+            targetLabel.fontColor = nasaOrange.withAlphaComponent(0.7)
+            targetLabel.horizontalAlignmentMode = .center
+            targetLabel.position = CGPoint(x: size.width * 0.5, y: size.height - 68)
+            targetLabel.zPosition = 40
+            addChild(targetLabel)
+        }
+    }
+
+    private func buildRetreatButton() {
+        guard isWaveBased else { return }
+
+        let btn = SKNode()
+        btn.name = "retreatButton"
+        btn.position = CGPoint(x: size.width - 60, y: 50)
+        btn.zPosition = 45
+
+        let bg = SKShapeNode(rectOf: CGSize(width: 90, height: 30), cornerRadius: 3)
+        bg.fillColor = Theme.offRed.withAlphaComponent(0.15)
+        bg.strokeColor = Theme.offRed.withAlphaComponent(0.4)
+        bg.lineWidth = 1
+        bg.name = "retreatButton"
+        btn.addChild(bg)
+
+        let label = SKLabelNode(fontNamed: "Courier-Bold")
+        label.text = "RETREAT"
+        label.fontSize = 10
+        label.fontColor = Theme.offRed.withAlphaComponent(0.7)
+        label.verticalAlignmentMode = .center
+        label.name = "retreatButton"
+        btn.addChild(label)
+
+        retreatButton = btn
+        addChild(btn)
+    }
+
+    // MARK: - Wave Management
+
+    private func startNextWave() {
+        guard !isGameOver else { return }
+        currentWave += 1
+
+        if currentWave > totalWaves {
+            combatVictory()
+            return
+        }
+
+        waveInProgress = true
+        let difficultyMul = combatContext?.difficultyMultiplier ?? 1.0
+        let enemyCount = 2 + currentWave + Int(difficultyMul)
+        enemiesRemainingInWave = enemyCount
+
+        // Announce wave
+        waveLabel?.text = "WAVE \(currentWave)/\(totalWaves)"
+
+        let announcement = SKLabelNode(fontNamed: "Helvetica-Bold")
+        announcement.text = "WAVE \(currentWave)"
+        announcement.fontSize = 40
+        announcement.fontColor = nasaOrange
+        announcement.position = CGPoint(x: size.width * 0.5, y: size.height * 0.5)
+        announcement.zPosition = 45
+        announcement.alpha = 0
+        addChild(announcement)
+
+        announcement.run(SKAction.sequence([
+            SKAction.fadeIn(withDuration: 0.3),
+            SKAction.wait(forDuration: 0.8),
+            SKAction.fadeOut(withDuration: 0.3),
+            SKAction.removeFromParent()
+        ]))
+
+        // Spawn enemies for this wave with delay
+        for i in 0..<enemyCount {
+            run(SKAction.sequence([
+                SKAction.wait(forDuration: Double(i) * 0.8 + 0.5),
+                SKAction.run { [weak self] in self?.spawnEnemy() }
+            ]))
+        }
+    }
+
+    private func onEnemyDestroyed() {
+        guard isWaveBased, waveInProgress else { return }
+        enemiesRemainingInWave -= 1
+
+        if enemiesRemainingInWave <= 0 {
+            waveInProgress = false
+            // Delay before next wave
+            run(SKAction.sequence([
+                SKAction.wait(forDuration: 2.0),
+                SKAction.run { [weak self] in self?.startNextWave() }
+            ]))
+        }
+    }
+
+    private func combatVictory() {
+        isGameOver = true
+        motionManager.stopDeviceMotionUpdates()
+
+        let overlay = SKShapeNode(rectOf: size)
+        overlay.fillColor = SKColor.black.withAlphaComponent(0.5)
+        overlay.strokeColor = .clear
+        overlay.position = CGPoint(x: size.width * 0.5, y: size.height * 0.5)
+        overlay.zPosition = 70
+        overlay.alpha = 0
+        addChild(overlay)
+        overlay.run(SKAction.fadeAlpha(to: 0.5, duration: 0.5))
+
+        let victoryNode = SKNode()
+        victoryNode.zPosition = 80
+        victoryNode.alpha = 0
+
+        let title = SKLabelNode(fontNamed: "Helvetica-Bold")
+        title.text = "VICTORY"
+        title.fontSize = 40
+        title.fontColor = Theme.onGreen
+        title.position = CGPoint(x: size.width * 0.5, y: size.height * 0.6)
+        victoryNode.addChild(title)
+
+        if let ctx = combatContext {
+            let reward = SKLabelNode(fontNamed: "Courier")
+            reward.text = "+\(ctx.creditsReward) CR  +\(ctx.mineralsReward) MIN"
+            reward.fontSize = 14
+            reward.fontColor = warmGold
+            reward.position = CGPoint(x: size.width * 0.5, y: size.height * 0.6 - 35)
+            victoryNode.addChild(reward)
+
+            let planetText = SKLabelNode(fontNamed: "Courier")
+            planetText.text = "\(ctx.targetPlanetName) CAPTURED"
+            planetText.fontSize = 12
+            planetText.fontColor = creamWhite
+            planetText.position = CGPoint(x: size.width * 0.5, y: size.height * 0.6 - 55)
+            victoryNode.addChild(planetText)
+        }
+
+        let continueBtn = SKNode()
+        continueBtn.name = "victoryButton"
+        continueBtn.position = CGPoint(x: size.width * 0.5, y: size.height * 0.38)
+
+        let btnBg = SKShapeNode(rectOf: CGSize(width: 200, height: 42), cornerRadius: 3)
+        btnBg.fillColor = SKColor(red: 0.06, green: 0.06, blue: 0.1, alpha: 0.8)
+        btnBg.strokeColor = Theme.onGreen.withAlphaComponent(0.5)
+        btnBg.lineWidth = 1
+        btnBg.glowWidth = 3
+        btnBg.name = "victoryButton"
+        continueBtn.addChild(btnBg)
+
+        let btnLabel = SKLabelNode(fontNamed: "Courier-Bold")
+        btnLabel.text = "RETURN TO MAP"
+        btnLabel.fontSize = 14
+        btnLabel.fontColor = creamWhite
+        btnLabel.verticalAlignmentMode = .center
+        btnLabel.name = "victoryButton"
+        continueBtn.addChild(btnLabel)
+
+        victoryNode.addChild(continueBtn)
+        addChild(victoryNode)
+        victoryNode.run(SKAction.sequence([
+            SKAction.wait(forDuration: 0.3),
+            SKAction.fadeIn(withDuration: 0.6)
+        ]))
     }
 
     // MARK: - Spawning
@@ -722,6 +934,7 @@ class GameplayScene: SKScene, SKPhysicsContactDelegate {
             spawnExplosion(at: pos, color: SKColor(red: 1, green: 0.3, blue: 0.1, alpha: 1), count: 15)
             score += 50
             spawnLoot(at: pos)
+            onEnemyDestroyed()
 
         // Player hits asteroid
         case (Category.player, Category.asteroid), (Category.asteroid, Category.player):
@@ -769,15 +982,34 @@ class GameplayScene: SKScene, SKPhysicsContactDelegate {
         guard let touch = touches.first else { return }
         let location = touch.location(in: self)
 
-        // Check for return button on game over
+        // Check for buttons on game over / victory
         if isGameOver {
             let tapped = nodes(at: location)
-            for node in tapped where node.name == "returnButton" {
-                let menu = GameScene(size: size)
-                menu.scaleMode = .resizeFill
-                view?.presentScene(menu, transition: SKTransition.fade(withDuration: 0.6))
-                return
+            for node in tapped {
+                switch node.name {
+                case "returnButton":
+                    if isWaveBased {
+                        onCombatComplete?(.defeat)
+                    } else {
+                        let menu = GameScene(size: size)
+                        menu.scaleMode = .resizeFill
+                        view?.presentScene(menu, transition: SKTransition.fade(withDuration: 0.6))
+                    }
+                    return
+                case "victoryButton":
+                    onCombatComplete?(.victory)
+                    return
+                default:
+                    break
+                }
             }
+            return
+        }
+
+        // Retreat button
+        let tapped = nodes(at: location)
+        for node in tapped where node.name == "retreatButton" {
+            onCombatComplete?(.retreat)
             return
         }
 
@@ -820,28 +1052,32 @@ class GameplayScene: SKScene, SKPhysicsContactDelegate {
             }
         }
 
-        // Fuel drain
-        fuelTimer += dt
-        if fuelTimer > 0.5 {
-            fuelTimer = 0
-            fuel = max(0, fuel - 0.3)
-            if fuel <= 0 { gameOver() }
+        // Fuel drain (only in endless/non-wave mode)
+        if !isWaveBased {
+            fuelTimer += dt
+            if fuelTimer > 0.5 {
+                fuelTimer = 0
+                fuel = max(0, fuel - 0.3)
+                if fuel <= 0 { gameOver() }
+            }
         }
 
-        // Spawn asteroids
+        // Spawn asteroids (environmental hazard in both modes)
         asteroidTimer += dt
-        let asteroidInterval = max(0.4, 1.5 - Double(score) / 500.0)
+        let asteroidInterval = isWaveBased ? 2.5 : max(0.4, 1.5 - Double(score) / 500.0)
         if asteroidTimer > asteroidInterval {
             asteroidTimer = 0
             spawnAsteroid()
         }
 
-        // Spawn enemies
-        enemyTimer += dt
-        let enemyInterval = max(2.0, 6.0 - Double(score) / 200.0)
-        if enemyTimer > enemyInterval {
-            enemyTimer = 0
-            spawnEnemy()
+        // Spawn enemies (only in endless mode — wave mode uses startNextWave)
+        if !isWaveBased {
+            enemyTimer += dt
+            let enemyInterval = max(2.0, 6.0 - Double(score) / 200.0)
+            if enemyTimer > enemyInterval {
+                enemyTimer = 0
+                spawnEnemy()
+            }
         }
 
         // Cleanup off-screen nodes

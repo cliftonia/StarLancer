@@ -442,7 +442,16 @@ class GalaxyMapScene: SKScene {
 
             self.updateHUD()
             self.updateSelectionRing(planet.id)
-            self.showPlanetInfo(planet)
+
+            // If planet is not owned by player, trigger combat
+            if planet.owner != .player && planet.owner != nil {
+                self.enterCombat(for: planet)
+            } else if planet.owner == nil {
+                // Unclaimed — light resistance combat
+                self.enterCombat(for: planet)
+            } else {
+                self.showPlanetInfo(planet)
+            }
         }
 
         // Dismiss info panel during travel
@@ -549,6 +558,49 @@ class GalaxyMapScene: SKScene {
         planetInfoNode = nil
         selectionRing?.removeFromParent()
         selectedPlanetID = nil
+    }
+
+    // MARK: - Combat
+
+    private func enterCombat(for planet: Planet) {
+        let context = CombatContext.forPlanet(planet)
+
+        let combat = GameplayScene(size: size)
+        combat.scaleMode = .resizeFill
+        combat.combatContext = context
+        combat.gameState = gameState
+
+        combat.onCombatComplete = { [weak self] result in
+            guard let self else { return }
+
+            switch result {
+            case .victory:
+                // Capture planet
+                if var p = self.gameState.planet(withID: planet.id) {
+                    p.owner = .player
+                    self.gameState.updatePlanet(p)
+                }
+                // Award rewards
+                self.gameState.player.credits += context.creditsReward
+                self.gameState.player.minerals += context.mineralsReward
+
+            case .retreat:
+                // Return to previous planet (stay at current — already moved)
+                break
+
+            case .defeat:
+                // Lost the fight — stay at the planet but don't capture
+                break
+            }
+
+            // Return to galaxy map
+            let galaxyMap = GalaxyMapScene(size: self.size)
+            galaxyMap.scaleMode = .resizeFill
+            galaxyMap.gameState = self.gameState
+            self.view?.presentScene(galaxyMap, transition: SKTransition.fade(withDuration: 0.6))
+        }
+
+        view?.presentScene(combat, transition: SKTransition.fade(withDuration: 0.6))
     }
 
     // MARK: - Planet Detail
