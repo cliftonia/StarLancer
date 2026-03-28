@@ -113,8 +113,9 @@ extension GameplayScene {
         if isTouching {
             let target = touchLocation
             let diff = CGPoint(x: target.x - ship.position.x, y: target.y - ship.position.y)
-            dx += diff.x * 2.5
-            dy += diff.y * 2.5
+            let speedMul: CGFloat = speedBoostActive ? 4.0 : 2.5
+            dx += diff.x * speedMul
+            dy += diff.y * speedMul
         }
 
         shipSpeed = sqrt(dx * dx + dy * dy) * 0.01

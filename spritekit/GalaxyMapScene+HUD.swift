@@ -96,6 +96,21 @@ extension GalaxyMapScene {
         fleetLabel.name = "fleetLabel"
         cameraNode.addChild(fleetLabel)
 
+        // Income per turn
+        let ownedPlanets = gameState.planets.filter { $0.owner == .player }
+        let totalCR = ownedPlanets.reduce(0) { $0 + $1.creditsPerTurn }
+        let totalMIN = ownedPlanets.reduce(0) { $0 + $1.mineralsPerTurn }
+        let il = SKLabelNode(fontNamed: Theme.captionFont)
+        il.text = "+\(totalCR) CR/T  +\(totalMIN) MIN/T"
+        il.fontSize = 9
+        il.fontColor = Theme.onGreen.withAlphaComponent(0.5)
+        il.horizontalAlignmentMode = .right
+        il.verticalAlignmentMode = .center
+        il.position = CGPoint(x: size.width * 0.5 - padding, y: size.height * 0.5 - 48)
+        il.zPosition = hudZ
+        il.name = "incomeLabel"
+        cameraNode.addChild(il)
+
         // Bottom menu button
         let menuBtn = Theme.makeMenuButton(
             text: "MAIN MENU",
@@ -116,12 +131,20 @@ extension GalaxyMapScene {
         if let ml = cameraNode.childNode(withName: "mineralsLabel") as? SKLabelNode {
             ml.text = "MIN \(gameState.player.minerals)"
         }
-        let playerPlanets = gameState.planets.filter { $0.owner == .player }.count
+
+        let ownedPlanets = gameState.planets.filter { $0.owner == .player }
         if let pl = cameraNode.childNode(withName: "planetCountLabel") as? SKLabelNode {
-            pl.text = "PLANETS \(playerPlanets)/\(gameState.planets.count)"
+            pl.text = "PLANETS \(ownedPlanets.count)/\(gameState.planets.count)"
         }
         if let fl = cameraNode.childNode(withName: "fleetLabel") as? SKLabelNode {
             fl.text = "FLEET \(gameState.player.totalShips)"
+        }
+
+        // Income summary
+        let totalCR = ownedPlanets.reduce(0) { $0 + $1.creditsPerTurn }
+        let totalMIN = ownedPlanets.reduce(0) { $0 + $1.mineralsPerTurn }
+        if let il = cameraNode.childNode(withName: "incomeLabel") as? SKLabelNode {
+            il.text = "+\(totalCR) CR/T  +\(totalMIN) MIN/T"
         }
     }
 

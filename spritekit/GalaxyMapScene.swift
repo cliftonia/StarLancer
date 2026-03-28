@@ -79,9 +79,24 @@ class GalaxyMapScene: SKScene {
             path.move(to: a.position)
             path.addLine(to: b.position)
             line.path = path
-            line.strokeColor = Theme.hullGray.withAlphaComponent(0.15)
-            line.lineWidth = 1
-            line.glowWidth = 1
+            // Color routes based on danger level
+            let isDangerRoute = (a.owner == .player && b.owner != .player && b.owner != nil)
+                || (b.owner == .player && a.owner != .player && a.owner != nil)
+
+            if isDangerRoute {
+                line.strokeColor = Theme.offRed.withAlphaComponent(0.25)
+                line.lineWidth = 1.5
+                line.glowWidth = 3
+                let dangerPulse = SKAction.sequence([
+                    SKAction.fadeAlpha(to: 0.3, duration: 1.0),
+                    SKAction.fadeAlpha(to: 0.8, duration: 1.0)
+                ])
+                line.run(SKAction.repeatForever(dangerPulse))
+            } else {
+                line.strokeColor = Theme.hullGray.withAlphaComponent(0.15)
+                line.lineWidth = 1
+                line.glowWidth = 1
+            }
             line.zPosition = 1
             mapNode.addChild(line)
 

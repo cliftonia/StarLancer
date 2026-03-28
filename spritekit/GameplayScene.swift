@@ -85,6 +85,10 @@ class GameplayScene: SKScene, SKPhysicsContactDelegate {
     let motionManager = CMMotionManager()
     var shipSpeed: CGFloat = 0
 
+    // Active power-ups
+    var rapidFireActive = false
+    var speedBoostActive = false
+
     // Pause
     var isPaused2 = false
     var pauseOverlay: SKNode?

@@ -353,6 +353,131 @@ extension GameplayScene {
 
     // MARK: - Explosions
 
+    // MARK: - Power-Up Drops
+
+    func maybeSpawnPowerUp(at position: CGPoint) {
+        // 15% chance to drop a power-up from enemy kills
+        guard Double.random(in: 0...1) < 0.15 else { return }
+
+        let kinds: [(name: String, label: String, color: SKColor, glow: SKColor)] = [
+            ("powerup_rapid", "RF", SKColor(red: 1, green: 0.8, blue: 0, alpha: 1), warmGold),
+            ("powerup_shield", "SB", shieldBlue, SKColor(red: 0.4, green: 0.8, blue: 1, alpha: 1)),
+            ("powerup_speed", "SP", SKColor(red: 0.2, green: 1, blue: 0.5, alpha: 1), Theme.onGreen)
+        ]
+        let kind = kinds.randomElement()!
+
+        let powerUp = SKNode()
+        powerUp.name = kind.name
+        powerUp.position = position
+        powerUp.zPosition = 7
+
+        // Diamond shape
+        let diamondPath = CGMutablePath()
+        diamondPath.move(to: CGPoint(x: 0, y: 10))
+        diamondPath.addLine(to: CGPoint(x: 8, y: 0))
+        diamondPath.addLine(to: CGPoint(x: 0, y: -10))
+        diamondPath.addLine(to: CGPoint(x: -8, y: 0))
+        diamondPath.closeSubpath()
+
+        let shape = SKShapeNode(path: diamondPath)
+        shape.fillColor = kind.color.withAlphaComponent(0.6)
+        shape.strokeColor = kind.glow
+        shape.lineWidth = 1.5
+        shape.glowWidth = 8
+        shape.name = kind.name
+        powerUp.addChild(shape)
+
+        let label = SKLabelNode(fontNamed: "Courier-Bold")
+        label.text = kind.label
+        label.fontSize = 7
+        label.fontColor = .white
+        label.verticalAlignmentMode = .center
+        label.name = kind.name
+        powerUp.addChild(label)
+
+        powerUp.physicsBody = SKPhysicsBody(circleOfRadius: 10)
+        powerUp.physicsBody?.categoryBitMask = Category.loot
+        powerUp.physicsBody?.contactTestBitMask = Category.player
+        powerUp.physicsBody?.collisionBitMask = 0
+        powerUp.physicsBody?.isDynamic = true
+        powerUp.physicsBody?.velocity = CGVector(dx: 0, dy: -40)
+        powerUp.physicsBody?.linearDamping = 0
+
+        // Spinning + pulsing
+        let spin = SKAction.rotate(byAngle: .pi * 2, duration: 2.0)
+        powerUp.run(SKAction.repeatForever(spin))
+
+        let pulse = SKAction.sequence([
+            SKAction.scale(to: 1.15, duration: 0.4),
+            SKAction.scale(to: 0.9, duration: 0.4)
+        ])
+        shape.run(SKAction.repeatForever(pulse))
+
+        // Despawn after 8 seconds
+        powerUp.run(SKAction.sequence([
+            SKAction.wait(forDuration: 8),
+            SKAction.fadeOut(withDuration: 0.5),
+            SKAction.removeFromParent()
+        ]))
+
+        addChild(powerUp)
+    }
+
+    func activatePowerUp(_ name: String) {
+        GameFeedback.success()
+
+        switch name {
+        case "powerup_rapid":
+            rapidFireActive = true
+            showPowerUpText("RAPID FIRE")
+            run(SKAction.sequence([
+                SKAction.wait(forDuration: 5.0),
+                SKAction.run { [weak self] in self?.rapidFireActive = false }
+            ]))
+
+        case "powerup_shield":
+            shieldHP = min(100, shieldHP + 40)
+            showPowerUpText("SHIELD BURST")
+            shieldNode?.run(SKAction.sequence([
+                SKAction.fadeAlpha(to: 1.0, duration: 0.1),
+                SKAction.fadeAlpha(to: CGFloat(shieldHP) / 100.0, duration: 0.5)
+            ]))
+
+        case "powerup_speed":
+            speedBoostActive = true
+            showPowerUpText("SPEED BOOST")
+            run(SKAction.sequence([
+                SKAction.wait(forDuration: 5.0),
+                SKAction.run { [weak self] in self?.speedBoostActive = false }
+            ]))
+
+        default:
+            break
+        }
+    }
+
+    private func showPowerUpText(_ text: String) {
+        let label = SKLabelNode(fontNamed: "Courier-Bold")
+        label.text = text
+        label.fontSize = 18
+        label.fontColor = warmGold
+        label.position = CGPoint(x: size.width * 0.5, y: size.height * 0.4)
+        label.zPosition = 35
+        label.alpha = 0
+        addChild(label)
+
+        label.run(SKAction.sequence([
+            SKAction.fadeIn(withDuration: 0.15),
+            SKAction.group([
+                SKAction.moveBy(x: 0, y: 30, duration: 1.0),
+                SKAction.fadeOut(withDuration: 1.0)
+            ]),
+            SKAction.removeFromParent()
+        ]))
+    }
+
+    // MARK: - Explosions
+
     func spawnExplosion(at position: CGPoint, color: SKColor, count: Int = 12) {
         for _ in 0..<count {
             let particle = SKShapeNode(circleOfRadius: CGFloat.random(in: 1.5...4))

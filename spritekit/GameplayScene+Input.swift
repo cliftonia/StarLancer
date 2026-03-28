@@ -37,6 +37,7 @@ extension GameplayScene {
             spawnExplosion(at: pos, color: SKColor(red: 1, green: 0.3, blue: 0.1, alpha: 1), count: 15)
             score += 50
             spawnLoot(at: pos)
+            maybeSpawnPowerUp(at: pos)
             onEnemyDestroyed()
             GameFeedback.lightImpact()
 
@@ -62,14 +63,18 @@ extension GameplayScene {
             bullet?.removeFromParent()
             takeDamage(15)
 
-        // Player picks up loot
+        // Player picks up loot or power-up
         case (Category.player, Category.loot), (Category.loot, Category.player):
             let loot = masks.0 == Category.loot ? a.node : b.node
             if let name = loot?.name {
-                if name.contains("CR") { credits += Int.random(in: 5...25) }
-                if name.contains("HP") { health = min(100, health + 20) }
-                if name.contains("SH") { shieldHP = min(100, shieldHP + 25) }
-                if name.contains("FU") { fuel = min(100, fuel + 15) }
+                if name.hasPrefix("powerup_") {
+                    activatePowerUp(name)
+                } else {
+                    if name.contains("CR") { credits += Int.random(in: 5...25) }
+                    if name.contains("HP") { health = min(100, health + 20) }
+                    if name.contains("SH") { shieldHP = min(100, shieldHP + 25) }
+                    if name.contains("FU") { fuel = min(100, fuel + 15) }
+                }
             }
             loot?.removeFromParent()
 
@@ -174,9 +179,10 @@ extension GameplayScene {
         // Move ship with gyro + touch
         updatePlayerMovement(dt: dt)
 
-        // Auto-fire while touching (fleet fighters increase rate)
+        // Auto-fire while touching (fleet fighters + rapid fire power-up)
         if isTouching {
-            let fireRate = 0.2 * fireRateMultiplier
+            let rapidMul = rapidFireActive ? 0.4 : 1.0
+            let fireRate = 0.2 * fireRateMultiplier * rapidMul
             if currentTime.truncatingRemainder(dividingBy: fireRate) < dt {
                 fireBullet()
             }
