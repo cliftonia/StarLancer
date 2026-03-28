@@ -15,6 +15,7 @@ extension GameplayScene {
 
         let fighters = state.player.shipCount(for: .fighter)
         let destroyers = state.player.shipCount(for: .destroyer)
+        let bombers = state.player.shipCount(for: .bomber)
         let missiles = state.player.shipCount(for: .missileCarrier)
         let transports = state.player.shipCount(for: .troopTransport)
 
@@ -24,6 +25,9 @@ extension GameplayScene {
         // Destroyers: each adds 20 HP
         bonusHP = destroyers * 20
         health += bonusHP
+
+        // Bombers: weapon upgrade (1 = dual, 2+ = spread)
+        weaponLevel = min(2, bombers)
 
         // Missile carriers: spawn homing missiles periodically
         missileCarrierCount = missiles

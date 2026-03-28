@@ -152,6 +152,34 @@ extension GameplayScene {
         addChild(reticleDot)
     }
 
+    func buildComboLabel() {
+        let cl = SKLabelNode(fontNamed: "Helvetica-Bold")
+        cl.fontSize = 22
+        cl.fontColor = warmGold
+        cl.position = CGPoint(x: size.width * 0.5, y: size.height * 0.35)
+        cl.zPosition = 35
+        cl.alpha = 0
+        cl.name = "comboLabel"
+        comboLabel = cl
+        addChild(cl)
+    }
+
+    func registerComboKill() {
+        comboCount += 1
+        comboTimer = 0
+
+        if comboLabel == nil { buildComboLabel() }
+
+        if comboCount >= 3 {
+            comboLabel?.text = "\(scoreMultiplier)x COMBO"
+            comboLabel?.run(SKAction.sequence([
+                SKAction.fadeAlpha(to: 1.0, duration: 0.1),
+                SKAction.scale(to: 1.2, duration: 0.1),
+                SKAction.scale(to: 1.0, duration: 0.1)
+            ]))
+        }
+    }
+
     func updateHUD() {
         healthLabel?.text = "HULL \(max(0, health))%"
         healthLabel?.fontColor = health <= 25 ? nasaOrange : creamWhite

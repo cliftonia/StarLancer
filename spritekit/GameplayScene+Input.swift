@@ -24,7 +24,8 @@ extension GameplayScene {
             bullet?.removeFromParent()
             asteroid?.removeFromParent()
             spawnExplosion(at: pos, color: warmGold, count: 8)
-            score += 10
+            registerComboKill()
+            score += 10 * scoreMultiplier
             if Bool.random() { spawnLoot(at: pos) }
 
         // Bullet hits enemy
@@ -35,7 +36,8 @@ extension GameplayScene {
             bullet?.removeFromParent()
             enemy?.removeFromParent()
             spawnExplosion(at: pos, color: SKColor(red: 1, green: 0.3, blue: 0.1, alpha: 1), count: 15)
-            score += 50
+            registerComboKill()
+            score += 50 * scoreMultiplier
             spawnLoot(at: pos)
             maybeSpawnPowerUp(at: pos)
             onEnemyDestroyed()
@@ -175,6 +177,16 @@ extension GameplayScene {
         lastUpdateTime = currentTime
 
         guard !isGameOver, !isPaused2 else { return }
+
+        // Combo decay
+        if comboCount > 0 {
+            comboTimer += dt
+            if comboTimer > 2.0 {
+                comboCount = 0
+                comboTimer = 0
+                comboLabel?.run(SKAction.fadeOut(withDuration: 0.3))
+            }
+        }
 
         // Move ship with gyro + touch
         updatePlayerMovement(dt: dt)

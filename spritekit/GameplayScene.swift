@@ -89,6 +89,15 @@ class GameplayScene: SKScene, SKPhysicsContactDelegate {
     var rapidFireActive = false
     var speedBoostActive = false
 
+    // Weapon level: 0 = single, 1 = dual, 2 = spread
+    var weaponLevel: Int = 0
+
+    // Combo system
+    var comboCount: Int = 0
+    var comboTimer: TimeInterval = 0
+    var scoreMultiplier: Int { max(1, comboCount / 3 + 1) }
+    var comboLabel: SKLabelNode?
+
     // Pause
     var isPaused2 = false
     var pauseOverlay: SKNode?

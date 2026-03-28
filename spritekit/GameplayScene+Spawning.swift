@@ -284,11 +284,30 @@ extension GameplayScene {
         guard !isGameOver, let ship = playerShip else { return }
         GameFeedback.lightImpact()
 
+        switch weaponLevel {
+        case 0:
+            // Single shot
+            spawnBullet(at: ship.position, offset: CGPoint(x: 0, y: 28), velocity: CGVector(dx: 0, dy: 500))
+
+        case 1:
+            // Dual shot
+            spawnBullet(at: ship.position, offset: CGPoint(x: -8, y: 24), velocity: CGVector(dx: 0, dy: 500))
+            spawnBullet(at: ship.position, offset: CGPoint(x: 8, y: 24), velocity: CGVector(dx: 0, dy: 500))
+
+        default:
+            // Spread shot (3 bullets)
+            spawnBullet(at: ship.position, offset: CGPoint(x: 0, y: 28), velocity: CGVector(dx: 0, dy: 500))
+            spawnBullet(at: ship.position, offset: CGPoint(x: -6, y: 22), velocity: CGVector(dx: -60, dy: 480))
+            spawnBullet(at: ship.position, offset: CGPoint(x: 6, y: 22), velocity: CGVector(dx: 60, dy: 480))
+        }
+    }
+
+    private func spawnBullet(at shipPos: CGPoint, offset: CGPoint, velocity: CGVector) {
         let bullet = SKShapeNode(rectOf: CGSize(width: 2, height: 10), cornerRadius: 1)
         bullet.fillColor = nasaOrange
         bullet.strokeColor = .clear
         bullet.glowWidth = 5
-        bullet.position = CGPoint(x: ship.position.x, y: ship.position.y + 28)
+        bullet.position = CGPoint(x: shipPos.x + offset.x, y: shipPos.y + offset.y)
         bullet.zPosition = 9
         bullet.name = "bullet"
 
@@ -297,7 +316,7 @@ extension GameplayScene {
         bullet.physicsBody?.contactTestBitMask = Category.asteroid | Category.enemy
         bullet.physicsBody?.collisionBitMask = 0
         bullet.physicsBody?.isDynamic = true
-        bullet.physicsBody?.velocity = CGVector(dx: 0, dy: 500)
+        bullet.physicsBody?.velocity = velocity
         bullet.physicsBody?.linearDamping = 0
 
         addChild(bullet)
