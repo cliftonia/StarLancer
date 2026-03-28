@@ -74,6 +74,20 @@ enum GalaxyGenerator {
         planets[0].minerals = 60
         planets[0].population = 150
 
+        // Assign AI faction home planets (spread across the map)
+        let aiFactions: [Faction] = FactionData.aiFactions
+        let factionStartIndices = spreadIndices(count: aiFactions.count, total: count, avoiding: 0)
+        for (i, factionIndex) in factionStartIndices.enumerated() where i < aiFactions.count {
+            planets[factionIndex].owner = aiFactions[i]
+            planets[factionIndex].isHQ = true
+            planets[factionIndex].mines = 1
+            planets[factionIndex].factories = 1
+            planets[factionIndex].hasSpaceport = false
+            planets[factionIndex].credits = 80
+            planets[factionIndex].minerals = 40
+            planets[factionIndex].population = 120
+        }
+
         // Generate routes using minimum spanning tree + extra connections
         var routes = buildMinimumSpanningTree(planets: planets)
 
@@ -146,6 +160,21 @@ enum GalaxyGenerator {
     }
 
     // MARK: - Helpers
+
+    private static func spreadIndices(count: Int, total: Int, avoiding: Int) -> [Int] {
+        // Pick indices spread across the range, avoiding a specific index
+        guard total > 1 else { return [] }
+        let step = total / (count + 1)
+        var indices: [Int] = []
+        for i in 1...count {
+            var idx = (step * i) % total
+            if idx == avoiding { idx = (idx + 1) % total }
+            if !indices.contains(idx) && idx != avoiding {
+                indices.append(idx)
+            }
+        }
+        return indices
+    }
 
     private static func distance(_ a: CGPoint, _ b: CGPoint) -> Double {
         let dx = a.x - b.x

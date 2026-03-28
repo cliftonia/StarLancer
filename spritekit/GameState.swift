@@ -239,10 +239,17 @@ struct GameState: Codable {
     }
 
     mutating func processTurn() {
+        // Resource generation for all owned planets
         for i in planets.indices {
             guard planets[i].owner != nil else { continue }
             planets[i].processTurn()
         }
+
+        // AI turns
+        for faction in FactionData.aiFactions {
+            AIController.processTurn(for: faction, in: &self)
+        }
+
         turn += 1
     }
 }

@@ -412,8 +412,20 @@ class GalaxyMapScene: SKScene {
         gameState.player.fuel -= fuelCost
         gameState.player.currentPlanetID = planet.id
 
+        // Track planet ownership before turn
+        let ownershipBefore = Dictionary(uniqueKeysWithValues: gameState.planets.map { ($0.id, $0.owner) })
+
         // Process turn when traveling
         gameState.processTurn()
+
+        // Detect AI captures
+        for p in gameState.planets {
+            let before = ownershipBefore[p.id] ?? nil
+            if p.owner != before && p.owner != .player && p.owner != nil {
+                let factionName = FactionData.info(for: p.owner!)?.displayName ?? p.owner!.rawValue.uppercased()
+                showNotification("\(factionName) captured \(p.name)")
+            }
+        }
 
         // Animate ship travel
         let destination = CGPoint(x: planet.positionX, y: planet.positionY + 24)
@@ -611,6 +623,42 @@ class GalaxyMapScene: SKScene {
         detail.gameState = gameState
         detail.planetID = planetID
         view?.presentScene(detail, transition: SKTransition.fade(withDuration: 0.4))
+    }
+
+    // MARK: - Notifications
+
+    private var notificationQueue: [String] = []
+    private var isShowingNotification = false
+
+    private func showNotification(_ text: String) {
+        notificationQueue.append(text)
+        if !isShowingNotification { displayNextNotification() }
+    }
+
+    private func displayNextNotification() {
+        guard !notificationQueue.isEmpty else {
+            isShowingNotification = false
+            return
+        }
+        isShowingNotification = true
+        let text = notificationQueue.removeFirst()
+
+        let notif = SKLabelNode(fontNamed: Theme.captionFont)
+        notif.text = "// \(text.uppercased())"
+        notif.fontSize = 11
+        notif.fontColor = Theme.nasaOrange.withAlphaComponent(0.9)
+        notif.position = CGPoint(x: 0, y: size.height * 0.5 - 70)
+        notif.zPosition = 110
+        notif.alpha = 0
+        cameraNode.addChild(notif)
+
+        notif.run(SKAction.sequence([
+            SKAction.fadeIn(withDuration: 0.3),
+            SKAction.wait(forDuration: 2.0),
+            SKAction.fadeOut(withDuration: 0.5),
+            SKAction.removeFromParent(),
+            SKAction.run { [weak self] in self?.displayNextNotification() }
+        ]))
     }
 
     // MARK: - Update
