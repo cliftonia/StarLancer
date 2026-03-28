@@ -427,6 +427,25 @@ class GalaxyMapScene: SKScene {
             }
         }
 
+        // Save after turn
+        SaveManager.save(gameState)
+
+        // Check win/lose conditions after travel animation completes
+        if gameState.playerHasLost {
+            run(SKAction.sequence([
+                SKAction.wait(forDuration: 1.5),
+                SKAction.run { [weak self] in self?.showEndScreen(victory: false) }
+            ]))
+            return
+        }
+        if gameState.playerHasWon {
+            run(SKAction.sequence([
+                SKAction.wait(forDuration: 1.5),
+                SKAction.run { [weak self] in self?.showEndScreen(victory: true) }
+            ]))
+            return
+        }
+
         // Animate ship travel
         let destination = CGPoint(x: planet.positionX, y: planet.positionY + 24)
         let cameraDestination = planet.position
@@ -570,6 +589,16 @@ class GalaxyMapScene: SKScene {
         planetInfoNode = nil
         selectionRing?.removeFromParent()
         selectedPlanetID = nil
+    }
+
+    // MARK: - End Screen
+
+    private func showEndScreen(victory: Bool) {
+        let endScene = VictoryScene(size: size)
+        endScene.scaleMode = .resizeFill
+        endScene.isVictory = victory
+        endScene.gameState = gameState
+        view?.presentScene(endScene, transition: SKTransition.fade(withDuration: 0.8))
     }
 
     // MARK: - Combat

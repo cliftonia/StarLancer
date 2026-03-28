@@ -14,18 +14,12 @@ class GameScene: SKScene {
     private var lastUpdateTime: TimeInterval = 0
     private var glitchTimer: TimeInterval = 0
 
-    private static let saveKey = "nasapunk_has_save"
-
     static var hasSavedGame: Bool {
-        UserDefaults.standard.bool(forKey: saveKey)
-    }
-
-    static func writeSave() {
-        UserDefaults.standard.set(true, forKey: saveKey)
+        SaveManager.hasSave
     }
 
     static func deleteSave() {
-        UserDefaults.standard.removeObject(forKey: saveKey)
+        SaveManager.deleteSave()
     }
 
     // MARK: - Scene Setup
@@ -423,8 +417,7 @@ class GameScene: SKScene {
     }
 
     private func continueGame() {
-        // TODO: Load saved GameState from disk (M6)
-        let state = GalaxyGenerator.generate()
+        guard let state = SaveManager.load() else { return }
         let galaxyMap = GalaxyMapScene(size: size)
         galaxyMap.scaleMode = .resizeFill
         galaxyMap.gameState = state

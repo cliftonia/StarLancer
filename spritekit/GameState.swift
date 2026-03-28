@@ -216,6 +216,19 @@ struct GameState: Codable {
     var turn: Int
     var config: GalaxyConfig
 
+    // MARK: - Win/Lose Conditions
+
+    var playerHasWon: Bool {
+        let enemyHQs = planets.filter { $0.isHQ && $0.owner != .player && $0.owner != nil }
+        let allPlayerOwned = planets.allSatisfy { $0.owner == .player || $0.owner == nil }
+        let playerOwnsAny = planets.contains { $0.owner == .player }
+        return playerOwnsAny && enemyHQs.isEmpty
+    }
+
+    var playerHasLost: Bool {
+        !planets.contains { $0.owner == .player }
+    }
+
     func planet(withID id: UUID) -> Planet? {
         planets.first { $0.id == id }
     }

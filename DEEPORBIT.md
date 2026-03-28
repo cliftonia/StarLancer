@@ -11,15 +11,15 @@ Fly between planets on a galaxy map, build economies, raise fleets, and fight to
 - [x] **M1: Galaxy Map** — Navigate between planets, fuel system
 - [x] **M2: Planet Management** — Build mines, factories, spaceports, biospheres
 - [x] **M3: Combat Integration** — Wave-based encounters, capture planets *(MVP)*
-- [ ] **M4: AI Factions** — 3 alien races expand and compete
-- [ ] **M5: Fleet System** — Build ships, fleet affects combat
-- [ ] **M6: Win/Lose + Polish** — Save/load, end states, campaign flow *(1.0)*
+- [x] **M4: AI Factions** — 3 alien races expand and compete
+- [x] **M5: Fleet System** — Build ships, fleet affects combat
+- [x] **M6: Win/Lose + Polish** — Save/load, end states, campaign flow *(1.0)*
 - [ ] **M7: Phantom Mode** — Strategic overview, diplomacy *(stretch)*
 
 ## Current Status
-**Active Milestone:** M4 — AI Factions
+**1.0 COMPLETE** — Full campaign game with save/load
 
 ## Tech
 - SpriteKit (no external deps)
 - iOS 16+, iPhone 14 compatible
-- 12 Swift files, ~5,500 lines
+- 17 Swift files
