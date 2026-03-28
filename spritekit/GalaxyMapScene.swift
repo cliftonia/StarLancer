@@ -57,9 +57,12 @@ class GalaxyMapScene: SKScene {
             cameraNode.position = planet.position
         }
 
-        // Add pan gesture
+        // Add gestures
         let pan = UIPanGestureRecognizer(target: self, action: #selector(handlePan(_:)))
         view.addGestureRecognizer(pan)
+
+        let pinch = UIPinchGestureRecognizer(target: self, action: #selector(handlePinch(_:)))
+        view.addGestureRecognizer(pinch)
     }
 
     // MARK: - Route Lines
@@ -420,7 +423,7 @@ class GalaxyMapScene: SKScene {
 
         // Detect AI captures
         for p in gameState.planets {
-            let before = ownershipBefore[p.id] ?? nil
+            let before = ownershipBefore[p.id]
             if p.owner != before && p.owner != .player && p.owner != nil {
                 let factionName = FactionData.info(for: p.owner!)?.displayName ?? p.owner!.rawValue.uppercased()
                 showNotification("\(factionName) captured \(p.name)")
@@ -518,7 +521,7 @@ class GalaxyMapScene: SKScene {
         selectedPlanetID = planetID
     }
 
-    // MARK: - Pan Gesture
+    // MARK: - Gestures
 
     @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {
         guard !isTravelAnimating else { return }
@@ -527,9 +530,24 @@ class GalaxyMapScene: SKScene {
 
         switch gesture.state {
         case .changed:
-            cameraNode.position.x -= translation.x
-            cameraNode.position.y += translation.y
+            let scale = cameraNode.xScale
+            cameraNode.position.x -= translation.x * scale
+            cameraNode.position.y += translation.y * scale
             gesture.setTranslation(.zero, in: view)
+        default:
+            break
+        }
+    }
+
+    @objc private func handlePinch(_ gesture: UIPinchGestureRecognizer) {
+        guard !isTravelAnimating else { return }
+
+        switch gesture.state {
+        case .changed:
+            let newScale = cameraNode.xScale / gesture.scale
+            let clamped = max(0.5, min(2.5, newScale))
+            cameraNode.setScale(clamped)
+            gesture.scale = 1.0
         default:
             break
         }

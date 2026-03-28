@@ -13,11 +13,11 @@ class GameplayScene: SKScene, SKPhysicsContactDelegate {
     // MARK: - Physics Categories
 
     private struct Category {
-        static let player:    UInt32 = 0x1 << 0
-        static let bullet:    UInt32 = 0x1 << 1
-        static let asteroid:  UInt32 = 0x1 << 2
-        static let enemy:     UInt32 = 0x1 << 3
-        static let loot:      UInt32 = 0x1 << 4
+        static let player: UInt32 = 0x1 << 0
+        static let bullet: UInt32 = 0x1 << 1
+        static let asteroid: UInt32 = 0x1 << 2
+        static let enemy: UInt32 = 0x1 << 3
+        static let loot: UInt32 = 0x1 << 4
         static let enemyFire: UInt32 = 0x1 << 5
     }
 
@@ -106,6 +106,7 @@ class GameplayScene: SKScene, SKPhysicsContactDelegate {
         buildHUD()
         buildWaveHUD()
         buildRetreatButton()
+        buildPauseButton()
         startGyroscope()
 
         // Start first wave after brief delay
@@ -481,6 +482,43 @@ class GameplayScene: SKScene, SKPhysicsContactDelegate {
             targetLabel.zPosition = 40
             addChild(targetLabel)
         }
+
+        // Wave progress bar
+        let barWidth: CGFloat = 160
+        let barBg = SKShapeNode(rectOf: CGSize(width: barWidth, height: 6), cornerRadius: 3)
+        barBg.fillColor = SKColor(red: 0.1, green: 0.1, blue: 0.15, alpha: 0.8)
+        barBg.strokeColor = hullGray.withAlphaComponent(0.3)
+        barBg.lineWidth = 0.5
+        barBg.position = CGPoint(x: size.width * 0.5, y: size.height - 82)
+        barBg.zPosition = 40
+        barBg.name = "waveBarBg"
+        addChild(barBg)
+
+        let barFill = SKShapeNode(rectOf: CGSize(width: 4, height: 4), cornerRadius: 2)
+        barFill.fillColor = nasaOrange
+        barFill.strokeColor = .clear
+        barFill.position = CGPoint(x: size.width * 0.5 - barWidth * 0.5 + 2, y: size.height - 82)
+        barFill.zPosition = 41
+        barFill.name = "waveBarFill"
+        addChild(barFill)
+    }
+
+    private func updateWaveProgressBar() {
+        guard isWaveBased, let fill = childNode(withName: "waveBarFill") as? SKShapeNode else { return }
+
+        let progress = CGFloat(currentWave) / CGFloat(totalWaves)
+        let barWidth: CGFloat = 156
+        let fillWidth = max(4, barWidth * progress)
+
+        let newFill = SKShapeNode(rectOf: CGSize(width: fillWidth, height: 4), cornerRadius: 2)
+        newFill.fillColor = nasaOrange
+        newFill.strokeColor = .clear
+        newFill.position = CGPoint(x: size.width * 0.5 - 78 + fillWidth * 0.5, y: size.height - 82)
+        newFill.zPosition = 41
+        newFill.name = "waveBarFill"
+
+        fill.removeFromParent()
+        addChild(newFill)
     }
 
     private func buildRetreatButton() {
@@ -510,6 +548,88 @@ class GameplayScene: SKScene, SKPhysicsContactDelegate {
         addChild(btn)
     }
 
+    // MARK: - Pause
+
+    private var isPaused2 = false // `isPaused` is reserved by SKScene
+    private var pauseOverlay: SKNode?
+
+    private func buildPauseButton() {
+        let btn = SKNode()
+        btn.name = "pauseButton"
+        btn.position = CGPoint(x: 40, y: size.height - 50)
+        btn.zPosition = 45
+
+        let bg = SKShapeNode(rectOf: CGSize(width: 36, height: 36), cornerRadius: 4)
+        bg.fillColor = SKColor(red: 0.06, green: 0.06, blue: 0.1, alpha: 0.7)
+        bg.strokeColor = creamWhite.withAlphaComponent(0.3)
+        bg.lineWidth = 1
+        bg.name = "pauseButton"
+        btn.addChild(bg)
+
+        // Two vertical bars = pause icon
+        let bar1 = SKShapeNode(rectOf: CGSize(width: 4, height: 16))
+        bar1.fillColor = creamWhite
+        bar1.strokeColor = .clear
+        bar1.position = CGPoint(x: -5, y: 0)
+        bar1.name = "pauseButton"
+        btn.addChild(bar1)
+
+        let bar2 = SKShapeNode(rectOf: CGSize(width: 4, height: 16))
+        bar2.fillColor = creamWhite
+        bar2.strokeColor = .clear
+        bar2.position = CGPoint(x: 5, y: 0)
+        bar2.name = "pauseButton"
+        btn.addChild(bar2)
+
+        addChild(btn)
+    }
+
+    private func togglePause() {
+        isPaused2.toggle()
+
+        if isPaused2 {
+            scene?.isPaused = true
+
+            let overlay = SKNode()
+            overlay.zPosition = 90
+
+            let dim = SKShapeNode(rectOf: size)
+            dim.fillColor = SKColor.black.withAlphaComponent(0.6)
+            dim.strokeColor = .clear
+            dim.position = CGPoint(x: size.width * 0.5, y: size.height * 0.5)
+            overlay.addChild(dim)
+
+            let title = SKLabelNode(fontNamed: "Helvetica-Bold")
+            title.text = "PAUSED"
+            title.fontSize = 36
+            title.fontColor = creamWhite
+            title.position = CGPoint(x: size.width * 0.5, y: size.height * 0.55)
+            overlay.addChild(title)
+
+            let resumeBtn = Theme.makeMenuButton(
+                text: "RESUME",
+                name: "resumeButton",
+                position: CGPoint(x: size.width * 0.5, y: size.height * 0.42)
+            )
+            overlay.addChild(resumeBtn)
+
+            let quitBtn = Theme.makeMenuButton(
+                text: "QUIT TO MENU",
+                name: "quitButton",
+                position: CGPoint(x: size.width * 0.5, y: size.height * 0.42 - 60),
+                accentColor: Theme.offRed
+            )
+            overlay.addChild(quitBtn)
+
+            pauseOverlay = overlay
+            addChild(overlay)
+        } else {
+            scene?.isPaused = false
+            pauseOverlay?.removeFromParent()
+            pauseOverlay = nil
+        }
+    }
+
     // MARK: - Wave Management
 
     private func startNextWave() {
@@ -528,6 +648,7 @@ class GameplayScene: SKScene, SKPhysicsContactDelegate {
 
         // Announce wave
         waveLabel?.text = "WAVE \(currentWave)/\(totalWaves)"
+        updateWaveProgressBar()
 
         let announcement = SKLabelNode(fontNamed: "Helvetica-Bold")
         announcement.text = "WAVE \(currentWave)"
@@ -1088,12 +1209,35 @@ class GameplayScene: SKScene, SKPhysicsContactDelegate {
             return
         }
 
-        // Retreat button
+        // Pause/Resume/Quit buttons
         let tapped = nodes(at: location)
-        for node in tapped where node.name == "retreatButton" {
-            onCombatComplete?(.retreat)
-            return
+        for node in tapped {
+            switch node.name {
+            case "pauseButton":
+                togglePause()
+                return
+            case "resumeButton":
+                togglePause()
+                return
+            case "quitButton":
+                scene?.isPaused = false
+                if isWaveBased {
+                    onCombatComplete?(.retreat)
+                } else {
+                    let menu = GameScene(size: size)
+                    menu.scaleMode = .resizeFill
+                    view?.presentScene(menu, transition: SKTransition.fade(withDuration: 0.6))
+                }
+                return
+            case "retreatButton":
+                onCombatComplete?(.retreat)
+                return
+            default:
+                break
+            }
         }
+
+        guard !isPaused2 else { return }
 
         isTouching = true
         touchLocation = location

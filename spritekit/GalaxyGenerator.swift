@@ -11,9 +11,9 @@ import Foundation
 enum GalaxyGenerator {
 
     private static let planetNames = [
-        "KEPLER",  "PROXIMA", "VEGA",    "ARCADIA",
-        "HELIOS",  "NOVUS",   "TITAN",   "CYGNUS",
-        "OLYMPUS", "EREBUS",  "SOLACE",  "DRAVEN"
+        "KEPLER", "PROXIMA", "VEGA", "ARCADIA",
+        "HELIOS", "NOVUS", "TITAN", "CYGNUS",
+        "OLYMPUS", "EREBUS", "SOLACE", "DRAVEN"
     ]
 
     static func generate(config: GalaxyConfig = GalaxyConfig(planetCount: 10, seed: 0)) -> GameState {
