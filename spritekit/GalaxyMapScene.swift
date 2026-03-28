@@ -11,22 +11,22 @@ class GalaxyMapScene: SKScene {
 
     var gameState: GameState!
 
-    private var cameraNode: SKCameraNode!
-    private var mapNode: SKNode!
-    private var planetNodes: [UUID: SKNode] = [:]
-    private var shipIcon: SKNode!
-    private var selectionRing: SKShapeNode?
-    private var selectedPlanetID: UUID?
+    var cameraNode: SKCameraNode!
+    var mapNode: SKNode!
+    var planetNodes: [UUID: SKNode] = [:]
+    var shipIcon: SKNode!
+    var selectionRing: SKShapeNode?
+    var selectedPlanetID: UUID?
 
     // HUD
-    private var fuelLabel: SKLabelNode?
-    private var creditsLabel: SKLabelNode?
-    private var turnLabel: SKLabelNode?
-    private var planetInfoNode: SKNode?
+    var fuelLabel: SKLabelNode?
+    var creditsLabel: SKLabelNode?
+    var turnLabel: SKLabelNode?
+    var planetInfoNode: SKNode?
 
     // Interaction
-    private var lastPanPoint: CGPoint?
-    private var isTravelAnimating = false
+    var lastPanPoint: CGPoint?
+    var isTravelAnimating = false
 
     // MARK: - Scene Setup
 
@@ -51,13 +51,11 @@ class GalaxyMapScene: SKScene {
         buildShipIcon()
         buildHUD()
 
-        // Center camera on player's current planet
         if let currentID = gameState.player.currentPlanetID,
            let planet = gameState.planet(withID: currentID) {
             cameraNode.position = planet.position
         }
 
-        // Add gestures
         let pan = UIPanGestureRecognizer(target: self, action: #selector(handlePan(_:)))
         view.addGestureRecognizer(pan)
 
@@ -67,7 +65,7 @@ class GalaxyMapScene: SKScene {
 
     // MARK: - Route Lines
 
-    private func buildRouteLines() {
+    func buildRouteLines() {
         for route in gameState.routes {
             guard let a = gameState.planet(withID: route.planetA),
                   let b = gameState.planet(withID: route.planetB) else { continue }
@@ -83,7 +81,6 @@ class GalaxyMapScene: SKScene {
             line.zPosition = 1
             mapNode.addChild(line)
 
-            // Dashed effect — dots along the route
             let dx = b.positionX - a.positionX
             let dy = b.positionY - a.positionY
             let dist = sqrt(dx * dx + dy * dy)
@@ -105,14 +102,13 @@ class GalaxyMapScene: SKScene {
 
     // MARK: - Planets
 
-    private func buildPlanets() {
+    func buildPlanets() {
         for planet in gameState.planets {
             let node = SKNode()
             node.position = planet.position
             node.name = "planet_\(planet.id.uuidString)"
             node.zPosition = 5
 
-            // Planet circle
             let radius: CGFloat = planet.isHQ ? 16 : 10 + CGFloat(planet.population) / 40
             let body = SKShapeNode(circleOfRadius: radius)
             body.name = node.name
@@ -129,7 +125,6 @@ class GalaxyMapScene: SKScene {
             body.lineWidth = 1.5
             node.addChild(body)
 
-            // Planet name
             let label = SKLabelNode(fontNamed: Theme.captionFont)
             label.text = planet.name
             label.fontSize = 9
@@ -139,7 +134,6 @@ class GalaxyMapScene: SKScene {
             label.horizontalAlignmentMode = .center
             node.addChild(label)
 
-            // HQ marker
             if planet.isHQ {
                 let hqLabel = SKLabelNode(fontNamed: Theme.bodyFont)
                 hqLabel.text = "HQ"
@@ -150,7 +144,6 @@ class GalaxyMapScene: SKScene {
                 node.addChild(hqLabel)
             }
 
-            // Subtle pulse for owned planets
             if planet.owner != nil {
                 let pulse = SKAction.sequence([
                     SKAction.fadeAlpha(to: 0.7, duration: 1.5),
@@ -164,7 +157,7 @@ class GalaxyMapScene: SKScene {
         }
     }
 
-    private func factionColor(_ faction: Faction) -> SKColor {
+    func factionColor(_ faction: Faction) -> SKColor {
         switch faction {
         case .player:  return Theme.retroBlue
         case .kethari: return Theme.offRed
@@ -175,7 +168,7 @@ class GalaxyMapScene: SKScene {
 
     // MARK: - Ship Icon
 
-    private func buildShipIcon() {
+    func buildShipIcon() {
         let ship = SKNode()
         ship.zPosition = 15
 
@@ -198,7 +191,6 @@ class GalaxyMapScene: SKScene {
             ship.position = CGPoint(x: planet.positionX, y: planet.positionY + 24)
         }
 
-        // Bob animation
         let bob = SKAction.sequence([
             SKAction.moveBy(x: 0, y: 3, duration: 1.0),
             SKAction.moveBy(x: 0, y: -3, duration: 1.0)
@@ -207,515 +199,5 @@ class GalaxyMapScene: SKScene {
 
         shipIcon = ship
         mapNode.addChild(ship)
-    }
-
-    // MARK: - HUD
-
-    private func buildHUD() {
-        let hudZ: CGFloat = 100
-        let padding: CGFloat = 16
-
-        // Top bar background
-        let topBar = SKShapeNode(rectOf: CGSize(width: size.width, height: 60))
-        topBar.fillColor = SKColor.black.withAlphaComponent(0.6)
-        topBar.strokeColor = Theme.hullGray.withAlphaComponent(0.2)
-        topBar.lineWidth = 0.5
-        topBar.position = CGPoint(x: 0, y: size.height * 0.5 - 30)
-        topBar.zPosition = hudZ - 1
-        cameraNode.addChild(topBar)
-
-        // Turn
-        let tl = SKLabelNode(fontNamed: Theme.bodyFont)
-        tl.text = "TURN \(gameState.turn)"
-        tl.fontSize = 14
-        tl.fontColor = Theme.creamWhite
-        tl.horizontalAlignmentMode = .left
-        tl.verticalAlignmentMode = .center
-        tl.position = CGPoint(x: -size.width * 0.5 + padding, y: size.height * 0.5 - 28)
-        tl.zPosition = hudZ
-        turnLabel = tl
-        cameraNode.addChild(tl)
-
-        // Fuel
-        let fl = SKLabelNode(fontNamed: Theme.captionFont)
-        fl.text = "FUEL \(Int(gameState.player.fuel))"
-        fl.fontSize = 11
-        fl.fontColor = Theme.warmGold
-        fl.horizontalAlignmentMode = .right
-        fl.verticalAlignmentMode = .center
-        fl.position = CGPoint(x: size.width * 0.5 - padding, y: size.height * 0.5 - 20)
-        fl.zPosition = hudZ
-        fuelLabel = fl
-        cameraNode.addChild(fl)
-
-        // Credits
-        let cl = SKLabelNode(fontNamed: Theme.captionFont)
-        cl.text = "CR \(gameState.player.credits)"
-        cl.fontSize = 11
-        cl.fontColor = Theme.warmGold
-        cl.horizontalAlignmentMode = .right
-        cl.verticalAlignmentMode = .center
-        cl.position = CGPoint(x: size.width * 0.5 - padding, y: size.height * 0.5 - 36)
-        cl.zPosition = hudZ
-        creditsLabel = cl
-        cameraNode.addChild(cl)
-
-        // Bottom menu button
-        let menuBtn = Theme.makeMenuButton(
-            text: "MAIN MENU",
-            name: "menuButton",
-            position: CGPoint(x: 0, y: -size.height * 0.5 + 40),
-            accentColor: Theme.retroBlue
-        )
-        menuBtn.zPosition = hudZ
-        menuBtn.setScale(0.85)
-        cameraNode.addChild(menuBtn)
-    }
-
-    private func updateHUD() {
-        turnLabel?.text = "TURN \(gameState.turn)"
-        fuelLabel?.text = "FUEL \(Int(gameState.player.fuel))"
-        creditsLabel?.text = "CR \(gameState.player.credits)"
-    }
-
-    // MARK: - Planet Info Panel
-
-    private func showPlanetInfo(_ planet: Planet) {
-        planetInfoNode?.removeFromParent()
-
-        let panel = SKNode()
-        panel.zPosition = 100
-        let panelY: CGFloat = -size.height * 0.5 + 140
-
-        // Background
-        let bg = SKShapeNode(rectOf: CGSize(width: 280, height: 130), cornerRadius: 4)
-        bg.fillColor = SKColor(red: 0.04, green: 0.04, blue: 0.08, alpha: 0.9)
-        bg.strokeColor = Theme.hullGray.withAlphaComponent(0.3)
-        bg.lineWidth = 1
-        bg.position = CGPoint(x: 0, y: panelY)
-        panel.addChild(bg)
-
-        // Planet name
-        let nameLabel = SKLabelNode(fontNamed: Theme.bodyFont)
-        nameLabel.text = planet.name
-        nameLabel.fontSize = 16
-        nameLabel.fontColor = planet.owner != nil ? factionColor(planet.owner!) : Theme.creamWhite
-        nameLabel.position = CGPoint(x: 0, y: panelY + 42)
-        panel.addChild(nameLabel)
-
-        // Owner
-        let ownerText = planet.owner?.rawValue.uppercased() ?? "UNCLAIMED"
-        let ownerLabel = SKLabelNode(fontNamed: Theme.captionFont)
-        ownerLabel.text = ownerText
-        ownerLabel.fontSize = 10
-        ownerLabel.fontColor = Theme.hullGray.withAlphaComponent(0.7)
-        ownerLabel.position = CGPoint(x: 0, y: panelY + 24)
-        panel.addChild(ownerLabel)
-
-        // Stats
-        let stats = "POP \(planet.population)  MIN \(planet.minerals)  CR \(planet.credits)"
-        let statsLabel = SKLabelNode(fontNamed: Theme.captionFont)
-        statsLabel.text = stats
-        statsLabel.fontSize = 10
-        statsLabel.fontColor = Theme.warmGold.withAlphaComponent(0.8)
-        statsLabel.position = CGPoint(x: 0, y: panelY + 4)
-        panel.addChild(statsLabel)
-
-        // Buildings
-        var buildings: [String] = []
-        if planet.mines > 0 { buildings.append("MINE x\(planet.mines)") }
-        if planet.factories > 0 { buildings.append("FAC x\(planet.factories)") }
-        if planet.hasSpaceport { buildings.append("PORT") }
-        if planet.hasBiosphere { buildings.append("BIO") }
-        let buildingText = buildings.isEmpty ? "NO STRUCTURES" : buildings.joined(separator: "  ")
-        let buildingLabel = SKLabelNode(fontNamed: Theme.captionFont)
-        buildingLabel.text = buildingText
-        buildingLabel.fontSize = 9
-        buildingLabel.fontColor = Theme.hullGray.withAlphaComponent(0.6)
-        buildingLabel.position = CGPoint(x: 0, y: panelY - 14)
-        panel.addChild(buildingLabel)
-
-        // Travel button (only if connected and not current planet)
-        let isCurrentPlanet = planet.id == gameState.player.currentPlanetID
-        let isConnected = gameState.connectedPlanets(from: gameState.player.currentPlanetID ?? UUID()).contains { $0.id == planet.id }
-
-        if !isCurrentPlanet && isConnected {
-            let fuelCost = gameState.fuelCost(from: gameState.player.currentPlanetID!, to: planet.id)
-            let canAfford = gameState.player.fuel >= fuelCost
-
-            let travelBtn = SKNode()
-            travelBtn.name = "travelButton"
-            travelBtn.position = CGPoint(x: 0, y: panelY - 40)
-
-            let btnBg = SKShapeNode(rectOf: CGSize(width: 180, height: 32), cornerRadius: 3)
-            btnBg.fillColor = canAfford ? Theme.nasaOrange.withAlphaComponent(0.2) : Theme.hullGray.withAlphaComponent(0.1)
-            btnBg.strokeColor = canAfford ? Theme.nasaOrange.withAlphaComponent(0.6) : Theme.hullGray.withAlphaComponent(0.3)
-            btnBg.lineWidth = 1
-            btnBg.glowWidth = canAfford ? 3 : 0
-            btnBg.name = "travelButton"
-            travelBtn.addChild(btnBg)
-
-            let btnText = SKLabelNode(fontNamed: Theme.bodyFont)
-            btnText.text = canAfford ? "TRAVEL (FUEL -\(Int(fuelCost)))" : "NOT ENOUGH FUEL"
-            btnText.fontSize = 11
-            btnText.fontColor = canAfford ? Theme.nasaOrange : Theme.hullGray.withAlphaComponent(0.5)
-            btnText.verticalAlignmentMode = .center
-            btnText.name = "travelButton"
-            travelBtn.addChild(btnText)
-
-            panel.addChild(travelBtn)
-        } else if isCurrentPlanet && planet.owner == .player {
-            // Manage planet button
-            let manageBtn = SKNode()
-            manageBtn.name = "manageButton"
-            manageBtn.position = CGPoint(x: 0, y: panelY - 40)
-
-            let manageBg = SKShapeNode(rectOf: CGSize(width: 180, height: 32), cornerRadius: 3)
-            manageBg.fillColor = Theme.retroBlue.withAlphaComponent(0.2)
-            manageBg.strokeColor = Theme.retroBlue.withAlphaComponent(0.6)
-            manageBg.lineWidth = 1
-            manageBg.glowWidth = 3
-            manageBg.name = "manageButton"
-            manageBtn.addChild(manageBg)
-
-            let manageText = SKLabelNode(fontNamed: Theme.bodyFont)
-            manageText.text = "MANAGE PLANET"
-            manageText.fontSize = 11
-            manageText.fontColor = Theme.retroBlue
-            manageText.verticalAlignmentMode = .center
-            manageText.name = "manageButton"
-            manageBtn.addChild(manageText)
-
-            panel.addChild(manageBtn)
-        } else if isCurrentPlanet {
-            let currentLabel = SKLabelNode(fontNamed: Theme.captionFont)
-            currentLabel.text = "// YOU ARE HERE"
-            currentLabel.fontSize = 10
-            currentLabel.fontColor = Theme.retroBlue.withAlphaComponent(0.6)
-            currentLabel.position = CGPoint(x: 0, y: panelY - 38)
-            panel.addChild(currentLabel)
-        }
-
-        panel.alpha = 0
-        cameraNode.addChild(panel)
-        panel.run(SKAction.fadeIn(withDuration: 0.2))
-        planetInfoNode = panel
-    }
-
-    // MARK: - Travel
-
-    private func travelTo(_ planet: Planet) {
-        guard !isTravelAnimating else { return }
-        guard let currentID = gameState.player.currentPlanetID else { return }
-
-        let fuelCost = gameState.fuelCost(from: currentID, to: planet.id)
-        guard gameState.player.fuel >= fuelCost else { return }
-
-        isTravelAnimating = true
-        gameState.player.fuel -= fuelCost
-        gameState.player.currentPlanetID = planet.id
-
-        // Track planet ownership before turn
-        let ownershipBefore = Dictionary(uniqueKeysWithValues: gameState.planets.map { ($0.id, $0.owner) })
-
-        // Process turn when traveling
-        gameState.processTurn()
-
-        // Detect AI captures
-        for p in gameState.planets {
-            let before = ownershipBefore[p.id]
-            if p.owner != before && p.owner != .player && p.owner != nil {
-                let factionName = FactionData.info(for: p.owner!)?.displayName ?? p.owner!.rawValue.uppercased()
-                showNotification("\(factionName) captured \(p.name)")
-            }
-        }
-
-        // Save after turn
-        SaveManager.save(gameState)
-
-        // Check win/lose conditions after travel animation completes
-        if gameState.playerHasLost {
-            run(SKAction.sequence([
-                SKAction.wait(forDuration: 1.5),
-                SKAction.run { [weak self] in self?.showEndScreen(victory: false) }
-            ]))
-            return
-        }
-        if gameState.playerHasWon {
-            run(SKAction.sequence([
-                SKAction.wait(forDuration: 1.5),
-                SKAction.run { [weak self] in self?.showEndScreen(victory: true) }
-            ]))
-            return
-        }
-
-        // Animate ship travel
-        let destination = CGPoint(x: planet.positionX, y: planet.positionY + 24)
-        let cameraDestination = planet.position
-
-        shipIcon.removeAllActions()
-
-        let travelDuration = 0.8
-        let moveShip = SKAction.move(to: destination, duration: travelDuration)
-        moveShip.timingMode = .easeInEaseOut
-
-        let moveCamera = SKAction.move(to: cameraDestination, duration: travelDuration)
-        moveCamera.timingMode = .easeInEaseOut
-
-        shipIcon.run(moveShip)
-        cameraNode.run(moveCamera) { [weak self] in
-            guard let self else { return }
-            self.isTravelAnimating = false
-
-            // Restart bob
-            let bob = SKAction.sequence([
-                SKAction.moveBy(x: 0, y: 3, duration: 1.0),
-                SKAction.moveBy(x: 0, y: -3, duration: 1.0)
-            ])
-            self.shipIcon.run(SKAction.repeatForever(bob))
-
-            self.updateHUD()
-            self.updateSelectionRing(planet.id)
-
-            // If planet is not owned by player, trigger combat
-            if planet.owner != .player && planet.owner != nil {
-                self.enterCombat(for: planet)
-            } else if planet.owner == nil {
-                // Unclaimed — light resistance combat
-                self.enterCombat(for: planet)
-            } else {
-                self.showPlanetInfo(planet)
-            }
-        }
-
-        // Dismiss info panel during travel
-        planetInfoNode?.run(SKAction.sequence([
-            SKAction.fadeOut(withDuration: 0.15),
-            SKAction.removeFromParent()
-        ]))
-        planetInfoNode = nil
-    }
-
-    // MARK: - Selection Ring
-
-    private func updateSelectionRing(_ planetID: UUID) {
-        selectionRing?.removeFromParent()
-
-        guard let node = planetNodes[planetID] else { return }
-
-        let ring = SKShapeNode(circleOfRadius: 22)
-        ring.strokeColor = Theme.creamWhite.withAlphaComponent(0.4)
-        ring.fillColor = .clear
-        ring.lineWidth = 1
-        ring.glowWidth = 3
-        ring.zPosition = 4
-
-        let pulse = SKAction.sequence([
-            SKAction.fadeAlpha(to: 0.2, duration: 1.0),
-            SKAction.fadeAlpha(to: 0.5, duration: 1.0)
-        ])
-        ring.run(SKAction.repeatForever(pulse))
-
-        node.addChild(ring)
-        selectionRing = ring
-        selectedPlanetID = planetID
-    }
-
-    // MARK: - Gestures
-
-    @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {
-        guard !isTravelAnimating else { return }
-
-        let translation = gesture.translation(in: view)
-
-        switch gesture.state {
-        case .changed:
-            let scale = cameraNode.xScale
-            cameraNode.position.x -= translation.x * scale
-            cameraNode.position.y += translation.y * scale
-            gesture.setTranslation(.zero, in: view)
-        default:
-            break
-        }
-    }
-
-    @objc private func handlePinch(_ gesture: UIPinchGestureRecognizer) {
-        guard !isTravelAnimating else { return }
-
-        switch gesture.state {
-        case .changed:
-            let newScale = cameraNode.xScale / gesture.scale
-            let clamped = max(0.5, min(2.5, newScale))
-            cameraNode.setScale(clamped)
-            gesture.scale = 1.0
-        default:
-            break
-        }
-    }
-
-    // MARK: - Touch
-
-    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        guard let touch = touches.first, !isTravelAnimating else { return }
-        let locationInScene = touch.location(in: self)
-        let locationInCamera = touch.location(in: cameraNode)
-        let tappedNodes = nodes(at: locationInScene)
-
-        // Check HUD buttons first (in camera space)
-        let hudNodes = cameraNode.nodes(at: locationInCamera)
-        for node in hudNodes where node.name == "menuButton" {
-            let menu = GameScene(size: size)
-            menu.scaleMode = .resizeFill
-            view?.presentScene(menu, transition: SKTransition.fade(withDuration: 0.6))
-            return
-        }
-
-        // Check travel button
-        for node in hudNodes where node.name == "travelButton" {
-            if let selectedID = selectedPlanetID,
-               let planet = gameState.planet(withID: selectedID) {
-                travelTo(planet)
-            }
-            return
-        }
-
-        // Check manage planet button
-        for node in hudNodes where node.name == "manageButton" {
-            if let selectedID = selectedPlanetID {
-                openPlanetDetail(selectedID)
-            }
-            return
-        }
-
-        // Check planet taps
-        for node in tappedNodes {
-            guard let name = node.name, name.hasPrefix("planet_") else { continue }
-            let uuidString = String(name.dropFirst(7))
-            guard let id = UUID(uuidString: uuidString),
-                  let planet = gameState.planet(withID: id) else { continue }
-
-            updateSelectionRing(id)
-            showPlanetInfo(planet)
-            return
-        }
-
-        // Tap on empty space — dismiss info
-        planetInfoNode?.run(SKAction.sequence([
-            SKAction.fadeOut(withDuration: 0.15),
-            SKAction.removeFromParent()
-        ]))
-        planetInfoNode = nil
-        selectionRing?.removeFromParent()
-        selectedPlanetID = nil
-    }
-
-    // MARK: - End Screen
-
-    private func showEndScreen(victory: Bool) {
-        let endScene = VictoryScene(size: size)
-        endScene.scaleMode = .resizeFill
-        endScene.isVictory = victory
-        endScene.gameState = gameState
-        view?.presentScene(endScene, transition: SKTransition.fade(withDuration: 0.8))
-    }
-
-    // MARK: - Combat
-
-    private func enterCombat(for planet: Planet) {
-        let context = CombatContext.forPlanet(planet)
-
-        let combat = GameplayScene(size: size)
-        combat.scaleMode = .resizeFill
-        combat.combatContext = context
-        combat.gameState = gameState
-
-        combat.onCombatComplete = { [weak self] result in
-            guard let self else { return }
-
-            switch result {
-            case .victory:
-                // Capture planet only if player has troop transports
-                let hasTransport = self.gameState.player.shipCount(for: .troopTransport) > 0
-                if hasTransport {
-                    if var p = self.gameState.planet(withID: planet.id) {
-                        p.owner = .player
-                        self.gameState.updatePlanet(p)
-                    }
-                    // Consume one troop transport
-                    self.gameState.player.removeShip(.troopTransport)
-                }
-                // Award rewards regardless
-                self.gameState.player.credits += context.creditsReward
-                self.gameState.player.minerals += context.mineralsReward
-
-            case .retreat:
-                // Return to previous planet (stay at current — already moved)
-                break
-
-            case .defeat:
-                // Lost the fight — stay at the planet but don't capture
-                break
-            }
-
-            // Return to galaxy map
-            let galaxyMap = GalaxyMapScene(size: self.size)
-            galaxyMap.scaleMode = .resizeFill
-            galaxyMap.gameState = self.gameState
-            self.view?.presentScene(galaxyMap, transition: SKTransition.fade(withDuration: 0.6))
-        }
-
-        view?.presentScene(combat, transition: SKTransition.fade(withDuration: 0.6))
-    }
-
-    // MARK: - Planet Detail
-
-    private func openPlanetDetail(_ planetID: UUID) {
-        let detail = PlanetDetailScene(size: size)
-        detail.scaleMode = .resizeFill
-        detail.gameState = gameState
-        detail.planetID = planetID
-        view?.presentScene(detail, transition: SKTransition.fade(withDuration: 0.4))
-    }
-
-    // MARK: - Notifications
-
-    private var notificationQueue: [String] = []
-    private var isShowingNotification = false
-
-    private func showNotification(_ text: String) {
-        notificationQueue.append(text)
-        if !isShowingNotification { displayNextNotification() }
-    }
-
-    private func displayNextNotification() {
-        guard !notificationQueue.isEmpty else {
-            isShowingNotification = false
-            return
-        }
-        isShowingNotification = true
-        let text = notificationQueue.removeFirst()
-
-        let notif = SKLabelNode(fontNamed: Theme.captionFont)
-        notif.text = "// \(text.uppercased())"
-        notif.fontSize = 11
-        notif.fontColor = Theme.nasaOrange.withAlphaComponent(0.9)
-        notif.position = CGPoint(x: 0, y: size.height * 0.5 - 70)
-        notif.zPosition = 110
-        notif.alpha = 0
-        cameraNode.addChild(notif)
-
-        notif.run(SKAction.sequence([
-            SKAction.fadeIn(withDuration: 0.3),
-            SKAction.wait(forDuration: 2.0),
-            SKAction.fadeOut(withDuration: 0.5),
-            SKAction.removeFromParent(),
-            SKAction.run { [weak self] in self?.displayNextNotification() }
-        ]))
-    }
-
-    // MARK: - Update
-
-    override func update(_ currentTime: TimeInterval) {
-        // Future: animations, AI processing indicators
     }
 }
