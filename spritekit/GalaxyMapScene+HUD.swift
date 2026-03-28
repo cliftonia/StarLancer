@@ -185,6 +185,29 @@ extension GalaxyMapScene {
             manageBtn.addChild(manageText)
 
             panel.addChild(manageBtn)
+        } else if isCurrentPlanet && planet.owner == nil {
+            // Claim unclaimed planet
+            let claimBtn = SKNode()
+            claimBtn.name = "claimButton"
+            claimBtn.position = CGPoint(x: 0, y: panelY - 40)
+
+            let claimBg = SKShapeNode(rectOf: CGSize(width: 180, height: 32), cornerRadius: 3)
+            claimBg.fillColor = Theme.onGreen.withAlphaComponent(0.2)
+            claimBg.strokeColor = Theme.onGreen.withAlphaComponent(0.6)
+            claimBg.lineWidth = 1
+            claimBg.glowWidth = 3
+            claimBg.name = "claimButton"
+            claimBtn.addChild(claimBg)
+
+            let claimText = SKLabelNode(fontNamed: Theme.bodyFont)
+            claimText.text = "CLAIM PLANET"
+            claimText.fontSize = 11
+            claimText.fontColor = Theme.onGreen
+            claimText.verticalAlignmentMode = .center
+            claimText.name = "claimButton"
+            claimBtn.addChild(claimText)
+
+            panel.addChild(claimBtn)
         } else if isCurrentPlanet {
             let currentLabel = SKLabelNode(fontNamed: Theme.captionFont)
             currentLabel.text = "// YOU ARE HERE"

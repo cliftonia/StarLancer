@@ -109,12 +109,36 @@ extension GameplayScene {
             return
         }
 
-        // Retreat button
+        // Check all interactive buttons
         let tapped = nodes(at: location)
-        for node in tapped where node.name == "retreatButton" {
-            onCombatComplete?(.retreat)
-            return
+        for node in tapped {
+            switch node.name {
+            case "pauseButton":
+                togglePause()
+                return
+            case "resumeButton":
+                togglePause()
+                return
+            case "quitButton":
+                scene?.isPaused = false
+                if isWaveBased {
+                    onCombatComplete?(.retreat)
+                } else {
+                    let menu = GameScene(size: size)
+                    menu.scaleMode = .resizeFill
+                    view?.presentScene(menu, transition: SKTransition.fade(withDuration: 0.6))
+                }
+                return
+            case "retreatButton":
+                onCombatComplete?(.retreat)
+                return
+            default:
+                break
+            }
         }
+
+        // Don't process gameplay input while paused
+        guard !isPaused2 else { return }
 
         isTouching = true
         touchLocation = location
@@ -141,7 +165,7 @@ extension GameplayScene {
         let dt = currentTime - lastUpdateTime
         lastUpdateTime = currentTime
 
-        guard !isGameOver else { return }
+        guard !isGameOver, !isPaused2 else { return }
 
         // Move ship with gyro + touch
         updatePlayerMovement(dt: dt)

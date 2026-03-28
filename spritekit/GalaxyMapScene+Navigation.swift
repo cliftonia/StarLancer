@@ -82,13 +82,11 @@ extension GalaxyMapScene {
             self.updateHUD()
             self.updateSelectionRing(planet.id)
 
-            // If planet is not owned by player, trigger combat
+            // Enemy planets trigger combat, others show info
             if planet.owner != .player && planet.owner != nil {
                 self.enterCombat(for: planet)
-            } else if planet.owner == nil {
-                // Unclaimed — light resistance combat
-                self.enterCombat(for: planet)
             } else {
+                // Unclaimed or player-owned — show info panel
                 self.showPlanetInfo(planet)
             }
         }
@@ -192,6 +190,14 @@ extension GalaxyMapScene {
             return
         }
 
+        // Check claim planet button
+        for node in hudNodes where node.name == "claimButton" {
+            if let selectedID = selectedPlanetID {
+                claimPlanet(selectedID)
+            }
+            return
+        }
+
         // Check planet taps
         for node in tappedNodes {
             guard let name = node.name, name.hasPrefix("planet_") else { continue }
@@ -212,6 +218,23 @@ extension GalaxyMapScene {
         planetInfoNode = nil
         selectionRing?.removeFromParent()
         selectedPlanetID = nil
+    }
+
+    // MARK: - Claim Unclaimed Planet
+
+    func claimPlanet(_ planetID: UUID) {
+        guard var planet = gameState.planet(withID: planetID),
+              planet.owner == nil else { return }
+
+        planet.owner = .player
+        gameState.updatePlanet(planet)
+        SaveManager.save(gameState)
+
+        // Refresh the map to show updated ownership
+        let galaxyMap = GalaxyMapScene(size: size)
+        galaxyMap.scaleMode = .resizeFill
+        galaxyMap.gameState = gameState
+        view?.presentScene(galaxyMap, transition: SKTransition.fade(withDuration: 0.3))
     }
 
     // MARK: - End Screen
