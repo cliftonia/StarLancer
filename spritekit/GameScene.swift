@@ -415,15 +415,20 @@ class GameScene: SKScene {
     // MARK: - Game Actions
 
     private func startNewGame() {
-        let gameplay = GameplayScene(size: size)
-        gameplay.scaleMode = .resizeFill
-        view?.presentScene(gameplay, transition: SKTransition.fade(withDuration: 0.8))
+        let state = GalaxyGenerator.generate()
+        let galaxyMap = GalaxyMapScene(size: size)
+        galaxyMap.scaleMode = .resizeFill
+        galaxyMap.gameState = state
+        view?.presentScene(galaxyMap, transition: SKTransition.fade(withDuration: 0.8))
     }
 
     private func continueGame() {
-        let gameplay = GameplayScene(size: size)
-        gameplay.scaleMode = .resizeFill
-        view?.presentScene(gameplay, transition: SKTransition.fade(withDuration: 0.8))
+        // TODO: Load saved GameState from disk (M6)
+        let state = GalaxyGenerator.generate()
+        let galaxyMap = GalaxyMapScene(size: size)
+        galaxyMap.scaleMode = .resizeFill
+        galaxyMap.gameState = state
+        view?.presentScene(galaxyMap, transition: SKTransition.fade(withDuration: 0.8))
     }
 
     private func openSettings() {
