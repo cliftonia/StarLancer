@@ -114,8 +114,8 @@ class PlanetDetailScene: SKScene {
 
         let resources: [(label: String, value: String, color: SKColor)] = [
             ("POP", "\(planet.population)", Theme.creamWhite),
-            ("MIN", "\(planet.minerals)", Theme.warmGold),
-            ("CR", "\(planet.credits)", Theme.warmGold),
+            ("MIN", "\(gameState.player.minerals)", Theme.warmGold),
+            ("CR", "\(gameState.player.credits)", Theme.warmGold),
             ("FUEL", "\(Int(gameState.player.fuel))", Theme.nasaOrange)
         ]
 
@@ -217,7 +217,8 @@ class PlanetDetailScene: SKScene {
 
         for (i, building) in buildOptions.enumerated() {
             let y = startY - 30 - CGFloat(i) * 50
-            let canBuild = planet.canBuild(building)
+            let canBuild = gameState.player.credits >= building.creditsCost
+                && gameState.player.minerals >= building.mineralsCost
 
             // Skip if already built (for single-instance buildings)
             if building == .spaceport && planet.hasSpaceport { continue }
@@ -343,9 +344,22 @@ class PlanetDetailScene: SKScene {
 
     private func attemptBuild(_ type: BuildingType) {
         guard var p = gameState.planet(withID: planetID) else { return }
-        guard p.canBuild(type) else { return }
 
-        p.build(type)
+        // Check player wallet (not planet resources)
+        guard gameState.player.credits >= type.creditsCost,
+              gameState.player.minerals >= type.mineralsCost else { return }
+
+        // Deduct from player wallet
+        gameState.player.credits -= type.creditsCost
+        gameState.player.minerals -= type.mineralsCost
+
+        // Apply building to planet
+        switch type {
+        case .mine:      p.mines += 1
+        case .factory:   p.factories += 1
+        case .spaceport: p.hasSpaceport = true
+        case .biosphere: p.hasBiosphere = true
+        }
         gameState.updatePlanet(p)
 
         // Refresh the scene
