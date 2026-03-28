@@ -35,6 +35,11 @@ extension GalaxyMapScene {
             }
         }
 
+        // Random travel events (20% chance)
+        if Double.random(in: 0...1) < 0.2 {
+            triggerTravelEvent()
+        }
+
         // Save after turn
         SaveManager.save(gameState)
 
@@ -221,6 +226,36 @@ extension GalaxyMapScene {
         planetInfoNode = nil
         selectionRing?.removeFromParent()
         selectedPlanetID = nil
+    }
+
+    // MARK: - Travel Events
+
+    func triggerTravelEvent() {
+        let events: [(message: String, effect: () -> Void)] = [
+            ("ASTEROID FIELD — hull damage, -10 fuel", { [self] in
+                gameState.player.fuel = max(0, gameState.player.fuel - 10)
+            }),
+            ("DISTRESS SIGNAL — rescued crew, +30 CR", { [self] in
+                gameState.player.credits += 30
+            }),
+            ("ABANDONED FUEL CACHE — +15 fuel", { [self] in
+                gameState.player.fuel = min(100, gameState.player.fuel + 15)
+            }),
+            ("DERELICT SHIP — salvaged +20 minerals", { [self] in
+                gameState.player.minerals += 20
+            }),
+            ("SOLAR FLARE — shields disrupted, systems nominal", {
+                // Flavor event — no gameplay effect
+            }),
+            ("DEEP SPACE SIGNAL — coordinates updated", {
+                // Flavor event
+            })
+        ]
+
+        let event = events.randomElement()!
+        event.effect()
+        showNotification(event.message)
+        updateHUD()
     }
 
     // MARK: - Resource Collection & Refuel
