@@ -112,10 +112,7 @@ class GameplayScene: SKScene, SKPhysicsContactDelegate {
         startGyroscope()
 
         if isWaveBased {
-            run(SKAction.sequence([
-                SKAction.wait(forDuration: 1.5),
-                SKAction.run { [weak self] in self?.startNextWave() }
-            ]))
+            showMissionBriefing()
         }
     }
 

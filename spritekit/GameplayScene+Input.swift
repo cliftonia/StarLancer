@@ -38,6 +38,7 @@ extension GameplayScene {
             score += 50
             spawnLoot(at: pos)
             onEnemyDestroyed()
+            GameFeedback.lightImpact()
 
         // Player hits asteroid
         case (Category.player, Category.asteroid), (Category.asteroid, Category.player):
@@ -113,6 +114,9 @@ extension GameplayScene {
         let tapped = nodes(at: location)
         for node in tapped {
             switch node.name {
+            case "engageButton":
+                dismissBriefing()
+                return
             case "pauseButton":
                 togglePause()
                 return

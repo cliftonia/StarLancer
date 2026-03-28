@@ -333,4 +333,119 @@ extension GameplayScene {
             pauseOverlay = nil
         }
     }
+
+    // MARK: - Mission Briefing
+
+    func showMissionBriefing() {
+        guard let ctx = combatContext else { return }
+        scene?.isPaused = true
+
+        let briefing = SKNode()
+        briefing.zPosition = 95
+        briefing.name = "missionBriefing"
+
+        // Dim background
+        let dim = SKShapeNode(rectOf: size)
+        dim.fillColor = SKColor.black.withAlphaComponent(0.75)
+        dim.strokeColor = .clear
+        dim.position = CGPoint(x: size.width * 0.5, y: size.height * 0.5)
+        briefing.addChild(dim)
+
+        let centerX = size.width * 0.5
+        let centerY = size.height * 0.55
+
+        // Mission label
+        let missionLabel = SKLabelNode(fontNamed: Theme.captionFont)
+        missionLabel.text = "// INCOMING TRANSMISSION"
+        missionLabel.fontSize = 10
+        missionLabel.fontColor = Theme.nasaOrange.withAlphaComponent(0.7)
+        missionLabel.position = CGPoint(x: centerX, y: centerY + 80)
+        briefing.addChild(missionLabel)
+
+        // Planet name
+        let planetName = SKLabelNode(fontNamed: Theme.titleFont)
+        planetName.text = ctx.targetPlanetName
+        planetName.fontSize = 36
+        planetName.fontColor = creamWhite
+        planetName.position = CGPoint(x: centerX, y: centerY + 40)
+        briefing.addChild(planetName)
+
+        // Enemy faction
+        let factionText = ctx.enemyFaction?.rawValue.uppercased() ?? "HOSTILE"
+        let factionLabel = SKLabelNode(fontNamed: Theme.captionFont)
+        factionLabel.text = "DEFENDED BY: \(factionText)"
+        factionLabel.fontSize = 12
+        factionLabel.fontColor = Theme.offRed.withAlphaComponent(0.8)
+        factionLabel.position = CGPoint(x: centerX, y: centerY + 10)
+        briefing.addChild(factionLabel)
+
+        // Wave count
+        let waveInfo = SKLabelNode(fontNamed: Theme.captionFont)
+        waveInfo.text = "HOSTILE WAVES: \(ctx.waveCount)   THREAT: \(Int(ctx.difficultyMultiplier * 100))%"
+        waveInfo.fontSize = 11
+        waveInfo.fontColor = warmGold
+        waveInfo.position = CGPoint(x: centerX, y: centerY - 15)
+        briefing.addChild(waveInfo)
+
+        // Fleet status
+        if let state = gameState {
+            let fleetText = "YOUR FLEET: \(state.player.totalShips) SHIPS"
+            let fleetLabel = SKLabelNode(fontNamed: Theme.captionFont)
+            fleetLabel.text = fleetText
+            fleetLabel.fontSize = 11
+            fleetLabel.fontColor = Theme.retroBlue.withAlphaComponent(0.7)
+            fleetLabel.position = CGPoint(x: centerX, y: centerY - 35)
+            briefing.addChild(fleetLabel)
+        }
+
+        // Rewards
+        let rewardText = "REWARD: +\(ctx.creditsReward) CR   +\(ctx.mineralsReward) MIN"
+        let rewardLabel = SKLabelNode(fontNamed: Theme.captionFont)
+        rewardLabel.text = rewardText
+        rewardLabel.fontSize = 10
+        rewardLabel.fontColor = Theme.onGreen.withAlphaComponent(0.6)
+        rewardLabel.position = CGPoint(x: centerX, y: centerY - 60)
+        briefing.addChild(rewardLabel)
+
+        // Separator
+        let sep = SKShapeNode()
+        let sepPath = CGMutablePath()
+        sepPath.move(to: CGPoint(x: centerX - 100, y: centerY - 80))
+        sepPath.addLine(to: CGPoint(x: centerX + 100, y: centerY - 80))
+        sep.path = sepPath
+        sep.strokeColor = Theme.nasaOrange.withAlphaComponent(0.3)
+        sep.lineWidth = 1
+        sep.glowWidth = 2
+        briefing.addChild(sep)
+
+        // Engage button
+        let engageBtn = Theme.makeMenuButton(
+            text: "ENGAGE",
+            name: "engageButton",
+            position: CGPoint(x: centerX, y: centerY - 120)
+        )
+        briefing.addChild(engageBtn)
+
+        // Fade in
+        briefing.alpha = 0
+        addChild(briefing)
+        briefing.run(SKAction.fadeIn(withDuration: 0.5))
+    }
+
+    func dismissBriefing() {
+        guard let briefing = childNode(withName: "missionBriefing") else { return }
+        scene?.isPaused = false
+        GameFeedback.mediumImpact()
+
+        briefing.run(SKAction.sequence([
+            SKAction.fadeOut(withDuration: 0.3),
+            SKAction.removeFromParent()
+        ]))
+
+        // Start first wave after briefing dismissed
+        run(SKAction.sequence([
+            SKAction.wait(forDuration: 0.5),
+            SKAction.run { [weak self] in self?.startNextWave() }
+        ]))
+    }
 }

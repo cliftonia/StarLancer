@@ -223,6 +223,11 @@ extension GameplayScene {
             health -= amount
         }
 
+        // Visual + haptic feedback
+        GameFeedback.damageFlash(self)
+        GameFeedback.shake(self, intensity: CGFloat(amount) * 0.4)
+        GameFeedback.mediumImpact()
+
         // Flash ship red
         playerShip.run(SKAction.sequence([
             SKAction.run { [weak self] in
@@ -236,6 +241,7 @@ extension GameplayScene {
         ]))
 
         if health <= 0 {
+            GameFeedback.heavyImpact()
             gameOver()
         }
     }

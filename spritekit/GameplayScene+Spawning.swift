@@ -5,9 +5,17 @@
 
 import SpriteKit
 
+// MARK: - Enemy Types
+
+enum EnemyKind: CaseIterable {
+    case scout      // Fast, weak, zigzag pattern
+    case gunship    // Tanky, slow, heavy fire
+    case bomber     // Drops mines, sweeps horizontally
+}
+
 extension GameplayScene {
 
-    // MARK: - Spawning
+    // MARK: - Asteroid Spawning
 
     func spawnAsteroid() {
         let radius = CGFloat.random(in: 10...35)
@@ -44,7 +52,10 @@ extension GameplayScene {
         asteroid.physicsBody?.contactTestBitMask = Category.bullet | Category.player
         asteroid.physicsBody?.collisionBitMask = 0
         asteroid.physicsBody?.isDynamic = true
-        asteroid.physicsBody?.velocity = CGVector(dx: CGFloat.random(in: -30...30), dy: -CGFloat.random(in: 80...200))
+        asteroid.physicsBody?.velocity = CGVector(
+            dx: CGFloat.random(in: -30...30),
+            dy: -CGFloat.random(in: 80...200)
+        )
         asteroid.physicsBody?.angularVelocity = CGFloat.random(in: -2...2)
         asteroid.physicsBody?.linearDamping = 0
         asteroid.physicsBody?.angularDamping = 0
@@ -52,16 +63,160 @@ extension GameplayScene {
         addChild(asteroid)
     }
 
+    // MARK: - Enemy Spawning (picks random type)
+
     func spawnEnemy() {
-        let enemy = SKNode()
-        enemy.name = "enemy"
+        let kind = EnemyKind.allCases.randomElement()!
+        switch kind {
+        case .scout:   spawnScout()
+        case .gunship: spawnGunship()
+        case .bomber:  spawnBomber()
+        }
+    }
+
+    // MARK: - Scout (fast, weak, zigzag)
+
+    private func spawnScout() {
+        let enemy = makeEnemyNode(
+            hullColor: SKColor(red: 0.2, green: 0.5, blue: 0.7, alpha: 0.9),
+            strokeColor: SKColor(red: 0.3, green: 0.7, blue: 1.0, alpha: 0.6),
+            cockpitColor: shieldBlue,
+            scale: 0.8
+        )
         enemy.position = CGPoint(
             x: CGFloat.random(in: 40...size.width - 40),
             y: size.height + 30
         )
-        enemy.zPosition = 8
 
-        // Enemy hull — diamond shape
+        // Fast zigzag descent
+        let zigzag = SKAction.sequence([
+            SKAction.moveBy(x: 60, y: -80, duration: 0.4),
+            SKAction.moveBy(x: -120, y: -80, duration: 0.4),
+            SKAction.moveBy(x: 60, y: -80, duration: 0.4)
+        ])
+        let fire = SKAction.run { [weak self] in self?.enemyFire(from: enemy) }
+        let pattern = SKAction.sequence([
+            zigzag,
+            fire,
+            zigzag,
+            fire,
+            SKAction.moveBy(x: 0, y: -size.height, duration: 2.0),
+            SKAction.removeFromParent()
+        ])
+        enemy.run(pattern)
+        addChild(enemy)
+    }
+
+    // MARK: - Gunship (tanky, slow, heavy fire)
+
+    private func spawnGunship() {
+        let enemy = makeEnemyNode(
+            hullColor: SKColor(red: 0.5, green: 0.15, blue: 0.15, alpha: 0.9),
+            strokeColor: SKColor(red: 0.8, green: 0.2, blue: 0.2, alpha: 0.6),
+            cockpitColor: SKColor(red: 1.0, green: 0.2, blue: 0.1, alpha: 0.8),
+            scale: 1.3
+        )
+        enemy.position = CGPoint(
+            x: CGFloat.random(in: 60...size.width - 60),
+            y: size.height + 40
+        )
+
+        // Slow descent, parks and fires repeatedly
+        let descend = SKAction.moveBy(x: 0, y: -250, duration: 2.0)
+        let fireBarrage = SKAction.repeat(SKAction.sequence([
+            SKAction.run { [weak self] in self?.enemyFire(from: enemy) },
+            SKAction.wait(forDuration: 0.3),
+            SKAction.run { [weak self] in self?.enemyFire(from: enemy) },
+            SKAction.wait(forDuration: 0.3),
+            SKAction.run { [weak self] in self?.enemyFire(from: enemy) },
+            SKAction.wait(forDuration: 1.0)
+        ]), count: 3)
+        let exit = SKAction.sequence([
+            SKAction.moveBy(x: 0, y: -size.height, duration: 3.0),
+            SKAction.removeFromParent()
+        ])
+
+        enemy.run(SKAction.sequence([descend, fireBarrage, exit]))
+        addChild(enemy)
+    }
+
+    // MARK: - Bomber (drops mines, sweeps horizontally)
+
+    private func spawnBomber() {
+        let enemy = makeEnemyNode(
+            hullColor: SKColor(red: 0.5, green: 0.4, blue: 0.1, alpha: 0.9),
+            strokeColor: SKColor(red: 0.8, green: 0.6, blue: 0.2, alpha: 0.6),
+            cockpitColor: warmGold,
+            scale: 1.1
+        )
+
+        let startLeft = Bool.random()
+        enemy.position = CGPoint(
+            x: startLeft ? -20 : size.width + 20,
+            y: size.height * CGFloat.random(in: 0.5...0.8)
+        )
+
+        // Horizontal sweep dropping mines
+        let sweepDistance = size.width + 40
+        let direction: CGFloat = startLeft ? 1 : -1
+        let sweep = SKAction.moveBy(x: direction * sweepDistance, y: -60, duration: 4.0)
+
+        // Drop mines during sweep
+        let dropMines = SKAction.repeat(SKAction.sequence([
+            SKAction.wait(forDuration: 0.6),
+            SKAction.run { [weak self] in self?.dropMine(at: enemy.position) }
+        ]), count: 5)
+
+        enemy.run(SKAction.sequence([
+            SKAction.group([sweep, dropMines]),
+            SKAction.removeFromParent()
+        ]))
+        addChild(enemy)
+    }
+
+    // MARK: - Mine (stationary hazard from bomber)
+
+    func dropMine(at position: CGPoint) {
+        let mine = SKShapeNode(circleOfRadius: 6)
+        mine.fillColor = warmGold.withAlphaComponent(0.5)
+        mine.strokeColor = warmGold
+        mine.lineWidth = 1
+        mine.glowWidth = 4
+        mine.position = position
+        mine.zPosition = 6
+        mine.name = "asteroid" // Reuse asteroid collision handling
+
+        mine.physicsBody = SKPhysicsBody(circleOfRadius: 6)
+        mine.physicsBody?.categoryBitMask = Category.asteroid
+        mine.physicsBody?.contactTestBitMask = Category.bullet | Category.player
+        mine.physicsBody?.collisionBitMask = 0
+        mine.physicsBody?.isDynamic = true
+        mine.physicsBody?.velocity = CGVector(dx: 0, dy: -30)
+        mine.physicsBody?.linearDamping = 0
+
+        // Pulsing warning
+        let pulse = SKAction.sequence([
+            SKAction.fadeAlpha(to: 0.3, duration: 0.4),
+            SKAction.fadeAlpha(to: 1.0, duration: 0.4)
+        ])
+        mine.run(SKAction.repeatForever(pulse))
+
+        addChild(mine)
+    }
+
+    // MARK: - Enemy Node Builder
+
+    private func makeEnemyNode(
+        hullColor: SKColor,
+        strokeColor: SKColor,
+        cockpitColor: SKColor,
+        scale: CGFloat
+    ) -> SKNode {
+        let enemy = SKNode()
+        enemy.name = "enemy"
+        enemy.zPosition = 8
+        enemy.setScale(scale)
+
         let hullPath = CGMutablePath()
         hullPath.move(to: CGPoint(x: 0, y: -18))
         hullPath.addLine(to: CGPoint(x: -14, y: 4))
@@ -71,14 +226,13 @@ extension GameplayScene {
         hullPath.closeSubpath()
 
         let hull = SKShapeNode(path: hullPath)
-        hull.fillColor = SKColor(red: 0.5, green: 0.15, blue: 0.15, alpha: 0.9)
-        hull.strokeColor = SKColor(red: 0.8, green: 0.2, blue: 0.2, alpha: 0.6)
+        hull.fillColor = hullColor
+        hull.strokeColor = strokeColor
         hull.lineWidth = 1
         enemy.addChild(hull)
 
-        // Red cockpit
         let cockpit = SKShapeNode(circleOfRadius: 3)
-        cockpit.fillColor = SKColor(red: 1.0, green: 0.2, blue: 0.1, alpha: 0.8)
+        cockpit.fillColor = cockpitColor
         cockpit.strokeColor = .clear
         cockpit.glowWidth = 4
         cockpit.position = CGPoint(x: 0, y: -2)
@@ -97,31 +251,10 @@ extension GameplayScene {
         enemy.physicsBody?.isDynamic = true
         enemy.physicsBody?.linearDamping = 0
 
-        // Movement — sweep down then strafe
-        let moveDown = SKAction.moveBy(x: 0, y: -200, duration: 1.5)
-        let strafe = SKAction.sequence([
-            SKAction.moveBy(x: CGFloat.random(in: -80...80), y: -40, duration: 1.0),
-            SKAction.moveBy(x: CGFloat.random(in: -80...80), y: -40, duration: 1.0)
-        ])
-        let exitDown = SKAction.moveBy(x: 0, y: -(size.height), duration: 3.0)
-
-        // Fire at player during strafe
-        let fireAction = SKAction.sequence([
-            SKAction.wait(forDuration: 0.8),
-            SKAction.run { [weak self] in self?.enemyFire(from: enemy) },
-            SKAction.wait(forDuration: 0.6),
-            SKAction.run { [weak self] in self?.enemyFire(from: enemy) }
-        ])
-
-        enemy.run(SKAction.sequence([
-            moveDown,
-            SKAction.group([strafe, fireAction]),
-            exitDown,
-            SKAction.removeFromParent()
-        ]))
-
-        addChild(enemy)
+        return enemy
     }
+
+    // MARK: - Enemy Fire
 
     func enemyFire(from enemy: SKNode) {
         guard !isGameOver else { return }
@@ -148,13 +281,14 @@ extension GameplayScene {
     // MARK: - Player Fire
 
     func fireBullet() {
-        guard !isGameOver else { return }
+        guard !isGameOver, let ship = playerShip else { return }
+        GameFeedback.lightImpact()
 
         let bullet = SKShapeNode(rectOf: CGSize(width: 2, height: 10), cornerRadius: 1)
         bullet.fillColor = nasaOrange
         bullet.strokeColor = .clear
         bullet.glowWidth = 5
-        bullet.position = CGPoint(x: playerShip.position.x, y: playerShip.position.y + 28)
+        bullet.position = CGPoint(x: ship.position.x, y: ship.position.y + 28)
         bullet.zPosition = 9
         bullet.name = "bullet"
 
@@ -230,7 +364,10 @@ extension GameplayScene {
 
             let angle = CGFloat.random(in: 0...(.pi * 2))
             let distance = CGFloat.random(in: 20...60)
-            let dest = CGPoint(x: position.x + cos(angle) * distance, y: position.y + sin(angle) * distance)
+            let dest = CGPoint(
+                x: position.x + cos(angle) * distance,
+                y: position.y + sin(angle) * distance
+            )
 
             let burst = SKAction.group([
                 SKAction.move(to: dest, duration: Double.random(in: 0.2...0.5)),
@@ -241,5 +378,4 @@ extension GameplayScene {
             particle.run(SKAction.sequence([burst, SKAction.removeFromParent()]))
         }
     }
-
 }

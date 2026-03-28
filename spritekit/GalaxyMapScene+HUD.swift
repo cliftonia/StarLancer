@@ -58,6 +58,44 @@ extension GalaxyMapScene {
         creditsLabel = cl
         cameraNode.addChild(cl)
 
+        // Minerals
+        let ml = SKLabelNode(fontNamed: Theme.captionFont)
+        ml.text = "MIN \(gameState.player.minerals)"
+        ml.fontSize = 11
+        ml.fontColor = Theme.warmGold.withAlphaComponent(0.7)
+        ml.horizontalAlignmentMode = .left
+        ml.verticalAlignmentMode = .center
+        ml.position = CGPoint(x: -size.width * 0.5 + padding, y: size.height * 0.5 - 44)
+        ml.zPosition = hudZ
+        ml.name = "mineralsLabel"
+        cameraNode.addChild(ml)
+
+        // Planet count
+        let playerPlanets = gameState.planets.filter { $0.owner == .player }.count
+        let totalPlanets = gameState.planets.count
+        let pl = SKLabelNode(fontNamed: Theme.captionFont)
+        pl.text = "PLANETS \(playerPlanets)/\(totalPlanets)"
+        pl.fontSize = 10
+        pl.fontColor = Theme.retroBlue.withAlphaComponent(0.6)
+        pl.horizontalAlignmentMode = .center
+        pl.verticalAlignmentMode = .center
+        pl.position = CGPoint(x: 0, y: size.height * 0.5 - 20)
+        pl.zPosition = hudZ
+        pl.name = "planetCountLabel"
+        cameraNode.addChild(pl)
+
+        // Fleet count
+        let fleetLabel = SKLabelNode(fontNamed: Theme.captionFont)
+        fleetLabel.text = "FLEET \(gameState.player.totalShips)"
+        fleetLabel.fontSize = 10
+        fleetLabel.fontColor = Theme.hullGray.withAlphaComponent(0.5)
+        fleetLabel.horizontalAlignmentMode = .center
+        fleetLabel.verticalAlignmentMode = .center
+        fleetLabel.position = CGPoint(x: 0, y: size.height * 0.5 - 36)
+        fleetLabel.zPosition = hudZ
+        fleetLabel.name = "fleetLabel"
+        cameraNode.addChild(fleetLabel)
+
         // Bottom menu button
         let menuBtn = Theme.makeMenuButton(
             text: "MAIN MENU",
@@ -74,6 +112,17 @@ extension GalaxyMapScene {
         turnLabel?.text = "TURN \(gameState.turn)"
         fuelLabel?.text = "FUEL \(Int(gameState.player.fuel))"
         creditsLabel?.text = "CR \(gameState.player.credits)"
+
+        if let ml = cameraNode.childNode(withName: "mineralsLabel") as? SKLabelNode {
+            ml.text = "MIN \(gameState.player.minerals)"
+        }
+        let playerPlanets = gameState.planets.filter { $0.owner == .player }.count
+        if let pl = cameraNode.childNode(withName: "planetCountLabel") as? SKLabelNode {
+            pl.text = "PLANETS \(playerPlanets)/\(gameState.planets.count)"
+        }
+        if let fl = cameraNode.childNode(withName: "fleetLabel") as? SKLabelNode {
+            fl.text = "FLEET \(gameState.player.totalShips)"
+        }
     }
 
     // MARK: - Planet Info Panel
