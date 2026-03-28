@@ -361,6 +361,29 @@ class GalaxyMapScene: SKScene {
             travelBtn.addChild(btnText)
 
             panel.addChild(travelBtn)
+        } else if isCurrentPlanet && planet.owner == .player {
+            // Manage planet button
+            let manageBtn = SKNode()
+            manageBtn.name = "manageButton"
+            manageBtn.position = CGPoint(x: 0, y: panelY - 40)
+
+            let manageBg = SKShapeNode(rectOf: CGSize(width: 180, height: 32), cornerRadius: 3)
+            manageBg.fillColor = Theme.retroBlue.withAlphaComponent(0.2)
+            manageBg.strokeColor = Theme.retroBlue.withAlphaComponent(0.6)
+            manageBg.lineWidth = 1
+            manageBg.glowWidth = 3
+            manageBg.name = "manageButton"
+            manageBtn.addChild(manageBg)
+
+            let manageText = SKLabelNode(fontNamed: Theme.bodyFont)
+            manageText.text = "MANAGE PLANET"
+            manageText.fontSize = 11
+            manageText.fontColor = Theme.retroBlue
+            manageText.verticalAlignmentMode = .center
+            manageText.name = "manageButton"
+            manageBtn.addChild(manageText)
+
+            panel.addChild(manageBtn)
         } else if isCurrentPlanet {
             let currentLabel = SKLabelNode(fontNamed: Theme.captionFont)
             currentLabel.text = "// YOU ARE HERE"
@@ -498,6 +521,14 @@ class GalaxyMapScene: SKScene {
             return
         }
 
+        // Check manage planet button
+        for node in hudNodes where node.name == "manageButton" {
+            if let selectedID = selectedPlanetID {
+                openPlanetDetail(selectedID)
+            }
+            return
+        }
+
         // Check planet taps
         for node in tappedNodes {
             guard let name = node.name, name.hasPrefix("planet_") else { continue }
@@ -518,6 +549,16 @@ class GalaxyMapScene: SKScene {
         planetInfoNode = nil
         selectionRing?.removeFromParent()
         selectedPlanetID = nil
+    }
+
+    // MARK: - Planet Detail
+
+    private func openPlanetDetail(_ planetID: UUID) {
+        let detail = PlanetDetailScene(size: size)
+        detail.scaleMode = .resizeFill
+        detail.gameState = gameState
+        detail.planetID = planetID
+        view?.presentScene(detail, transition: SKTransition.fade(withDuration: 0.4))
     }
 
     // MARK: - Update
