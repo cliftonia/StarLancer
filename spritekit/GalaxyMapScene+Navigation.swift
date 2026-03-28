@@ -128,7 +128,7 @@ extension GalaxyMapScene {
 
     // MARK: - Gestures
 
-    @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {
+    @objc func handlePan(_ gesture: UIPanGestureRecognizer) {
         guard !isTravelAnimating else { return }
 
         let translation = gesture.translation(in: view)
@@ -144,7 +144,7 @@ extension GalaxyMapScene {
         }
     }
 
-    @objc private func handlePinch(_ gesture: UIPinchGestureRecognizer) {
+    @objc func handlePinch(_ gesture: UIPinchGestureRecognizer) {
         guard !isTravelAnimating else { return }
 
         switch gesture.state {
@@ -287,5 +287,4 @@ extension GalaxyMapScene {
     override func update(_ currentTime: TimeInterval) {
         // Future: animations, AI processing indicators
     }
-}
 }

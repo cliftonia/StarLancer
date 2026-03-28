@@ -4,6 +4,7 @@
 //
 
 import SpriteKit
+import CoreMotion
 
 extension GameplayScene {
 

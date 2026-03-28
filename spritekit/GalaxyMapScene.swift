@@ -28,6 +28,10 @@ class GalaxyMapScene: SKScene {
     var lastPanPoint: CGPoint?
     var isTravelAnimating = false
 
+    // Notifications
+    var notificationQueue: [String] = []
+    var isShowingNotification = false
+
     // MARK: - Scene Setup
 
     override func didMove(to view: SKView) {

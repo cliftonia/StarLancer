@@ -82,11 +82,11 @@ class FleetManagerScene: SKScene {
         let types = ShipType.allCases
         var y = startY - 22
         for type in types {
-            let count = gameState.player.shipCount(for: type)
-            guard count > 0 else { continue }
+            let shipCount = gameState.player.shipCount(for: type)
+            guard shipCount > 0 else { continue }
 
             let row = SKLabelNode(fontNamed: Theme.captionFont)
-            row.text = "\(type.displayName): \(count)"
+            row.text = "\(type.displayName): \(shipCount)"
             row.fontSize = 11
             row.fontColor = Theme.warmGold.withAlphaComponent(0.8)
             row.position = CGPoint(x: centerX, y: y)
@@ -95,7 +95,7 @@ class FleetManagerScene: SKScene {
             y -= 18
         }
 
-        if gameState.player.totalShips == 0 {
+        if gameState.player.fleet.isEmpty {
             let empty = SKLabelNode(fontNamed: Theme.captionFont)
             empty.text = "NO SHIPS"
             empty.fontSize = 11

@@ -4,6 +4,7 @@
 //
 
 import SpriteKit
+import CoreMotion
 
 extension GameplayScene {
 
@@ -281,4 +282,42 @@ extension GameplayScene {
         creditsEarned.fontColor = warmGold
         creditsEarned.position = CGPoint(x: size.width * 0.5, y: size.height * 0.6 - 55)
         gameOverNode.addChild(creditsEarned)
+
+        // Return to menu button
+        let returnBtn = SKNode()
+        returnBtn.name = "returnButton"
+        returnBtn.position = CGPoint(x: size.width * 0.5, y: size.height * 0.38)
+
+        let btnBg = SKShapeNode(rectOf: CGSize(width: 200, height: 42), cornerRadius: 3)
+        btnBg.fillColor = SKColor(red: 0.06, green: 0.06, blue: 0.1, alpha: 0.8)
+        btnBg.strokeColor = creamWhite.withAlphaComponent(0.4)
+        btnBg.lineWidth = 1
+        btnBg.glowWidth = 2
+        btnBg.name = "returnButton"
+        returnBtn.addChild(btnBg)
+
+        let accent = SKShapeNode(rectOf: CGSize(width: 3, height: 42))
+        accent.fillColor = nasaOrange
+        accent.strokeColor = .clear
+        accent.glowWidth = 3
+        accent.position = CGPoint(x: -98.5, y: 0)
+        accent.name = "returnButton"
+        returnBtn.addChild(accent)
+
+        let btnLabel = SKLabelNode(fontNamed: "Courier-Bold")
+        btnLabel.text = "RETURN TO BASE"
+        btnLabel.fontSize = 14
+        btnLabel.fontColor = creamWhite
+        btnLabel.verticalAlignmentMode = .center
+        btnLabel.name = "returnButton"
+        returnBtn.addChild(btnLabel)
+
+        gameOverNode.addChild(returnBtn)
+
+        addChild(gameOverNode)
+        gameOverNode.run(SKAction.sequence([
+            SKAction.wait(forDuration: 0.5),
+            SKAction.fadeIn(withDuration: 0.8)
+        ]))
+    }
 }

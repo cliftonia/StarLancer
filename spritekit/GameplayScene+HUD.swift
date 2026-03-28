@@ -10,6 +10,14 @@ extension GameplayScene {
     // MARK: - Build HUD
 
     func buildHUD() {
+        buildHUDLeft()
+        buildHUDRight()
+        buildHUDCenter()
+    }
+
+    // MARK: - HUD Left (health, shield, fuel)
+
+    private func buildHUDLeft() {
         let hudZ: CGFloat = 40
         let topY = size.height - 50
         let padding: CGFloat = 16
@@ -70,6 +78,14 @@ extension GameplayScene {
         fuelLabel.position = CGPoint(x: padding + 4, y: topY - 36)
         fuelLabel.zPosition = hudZ
         addChild(fuelLabel)
+    }
+
+    // MARK: - HUD Right (score, credits)
+
+    private func buildHUDRight() {
+        let hudZ: CGFloat = 40
+        let topY = size.height - 50
+        let padding: CGFloat = 16
 
         let scl = SKLabelNode(fontNamed: "Courier-Bold")
         scl.text = "0"
@@ -102,6 +118,12 @@ extension GameplayScene {
         cl.zPosition = hudZ
         creditsLabel = cl
         addChild(cl)
+    }
+
+    // MARK: - HUD Center (speed, reticle)
+
+    private func buildHUDCenter() {
+        let hudZ: CGFloat = 40
 
         let spl = SKLabelNode(fontNamed: "Courier")
         spl.text = "SPD 0.0"

@@ -7,44 +7,6 @@ import SpriteKit
 
 extension GameplayScene {
 
-        // Return to menu button
-        let returnBtn = SKNode()
-        returnBtn.name = "returnButton"
-        returnBtn.position = CGPoint(x: size.width * 0.5, y: size.height * 0.38)
-
-        let btnBg = SKShapeNode(rectOf: CGSize(width: 200, height: 42), cornerRadius: 3)
-        btnBg.fillColor = SKColor(red: 0.06, green: 0.06, blue: 0.1, alpha: 0.8)
-        btnBg.strokeColor = creamWhite.withAlphaComponent(0.4)
-        btnBg.lineWidth = 1
-        btnBg.glowWidth = 2
-        btnBg.name = "returnButton"
-        returnBtn.addChild(btnBg)
-
-        let accent = SKShapeNode(rectOf: CGSize(width: 3, height: 42))
-        accent.fillColor = nasaOrange
-        accent.strokeColor = .clear
-        accent.glowWidth = 3
-        accent.position = CGPoint(x: -98.5, y: 0)
-        accent.name = "returnButton"
-        returnBtn.addChild(accent)
-
-        let btnLabel = SKLabelNode(fontNamed: "Courier-Bold")
-        btnLabel.text = "RETURN TO BASE"
-        btnLabel.fontSize = 14
-        btnLabel.fontColor = creamWhite
-        btnLabel.verticalAlignmentMode = .center
-        btnLabel.name = "returnButton"
-        returnBtn.addChild(btnLabel)
-
-        gameOverNode.addChild(returnBtn)
-
-        addChild(gameOverNode)
-        gameOverNode.run(SKAction.sequence([
-            SKAction.wait(forDuration: 0.5),
-            SKAction.fadeIn(withDuration: 0.8)
-        ]))
-    }
-
     // MARK: - Collisions
 
     func didBegin(_ contact: SKPhysicsContact) {
@@ -147,35 +109,12 @@ extension GameplayScene {
             return
         }
 
-        // Pause/Resume/Quit buttons
+        // Retreat button
         let tapped = nodes(at: location)
-        for node in tapped {
-            switch node.name {
-            case "pauseButton":
-                togglePause()
-                return
-            case "resumeButton":
-                togglePause()
-                return
-            case "quitButton":
-                scene?.isPaused = false
-                if isWaveBased {
-                    onCombatComplete?(.retreat)
-                } else {
-                    let menu = GameScene(size: size)
-                    menu.scaleMode = .resizeFill
-                    view?.presentScene(menu, transition: SKTransition.fade(withDuration: 0.6))
-                }
-                return
-            case "retreatButton":
-                onCombatComplete?(.retreat)
-                return
-            default:
-                break
-            }
+        for node in tapped where node.name == "retreatButton" {
+            onCombatComplete?(.retreat)
+            return
         }
-
-        guard !isPaused2 else { return }
 
         isTouching = true
         touchLocation = location
@@ -275,39 +214,4 @@ extension GameplayScene {
         updateHUD()
     }
 
-    func updatePlayerMovement(dt: TimeInterval) {
-        guard let ship = playerShip else { return }
-
-        var dx: CGFloat = 0
-        var dy: CGFloat = 0
-
-        // Gyroscope tilt
-        if let motion = motionManager.deviceMotion {
-            let tiltX = CGFloat(motion.attitude.roll) * 400
-            let tiltY = CGFloat(motion.attitude.pitch - 0.6) * 300
-            dx += tiltX
-            dy += tiltY
-        }
-
-        // Touch influence — ship drifts toward touch
-        if isTouching {
-            let target = touchLocation
-            let diff = CGPoint(x: target.x - ship.position.x, y: target.y - ship.position.y)
-            dx += diff.x * 2.5
-            dy += diff.y * 2.5
-        }
-
-        shipSpeed = sqrt(dx * dx + dy * dy) * 0.01
-
-        let newX = ship.position.x + dx * CGFloat(dt)
-        let newY = ship.position.y + dy * CGFloat(dt)
-
-        ship.position.x = max(20, min(size.width - 20, newX))
-        ship.position.y = max(40, min(size.height - 80, newY))
-
-        // Tilt ship visually
-        let tiltAngle = -dx * 0.0005
-        ship.zRotation = max(-.pi * 0.15, min(.pi * 0.15, tiltAngle))
-    }
-}
 }

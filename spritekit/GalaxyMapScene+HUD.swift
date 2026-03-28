@@ -200,34 +200,7 @@ extension GalaxyMapScene {
         planetInfoNode = panel
     }
 
-    // MARK: - Selection Ring
-
-    func updateSelectionRing(_ planetID: UUID) {
-        selectionRing?.removeFromParent()
-
-        guard let node = planetNodes[planetID] else { return }
-
-        let ring = SKShapeNode(circleOfRadius: 22)
-        ring.strokeColor = Theme.creamWhite.withAlphaComponent(0.4)
-        ring.fillColor = .clear
-        ring.lineWidth = 1
-        ring.glowWidth = 3
-        ring.zPosition = 4
-
-        let pulse = SKAction.sequence([
-            SKAction.fadeAlpha(to: 0.2, duration: 1.0),
-            SKAction.fadeAlpha(to: 0.5, duration: 1.0)
-        ])
-        ring.run(SKAction.repeatForever(pulse))
-
-        node.addChild(ring)
-        selectionRing = ring
-        selectedPlanetID = planetID
-    }
     // MARK: - Notifications
-
-    var notificationQueue: [String] = []
-    var isShowingNotification = false
 
     func showNotification(_ text: String) {
         notificationQueue.append(text)
