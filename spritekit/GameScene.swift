@@ -187,18 +187,18 @@ class GameScene: SKScene {
 
     func startNewGame() {
         let state = GalaxyGenerator.generate()
-        let galaxyMap = GalaxyMapScene(size: size)
-        galaxyMap.scaleMode = .resizeFill
-        galaxyMap.gameState = state
-        view?.presentScene(galaxyMap, transition: SKTransition.fade(withDuration: 0.8))
+        let roam = FreeRoamScene(size: size)
+        roam.scaleMode = .resizeFill
+        roam.gameState = state
+        view?.presentScene(roam, transition: SKTransition.fade(withDuration: 0.8))
     }
 
     func continueGame() {
         guard let state = SaveManager.load() else { return }
-        let galaxyMap = GalaxyMapScene(size: size)
-        galaxyMap.scaleMode = .resizeFill
-        galaxyMap.gameState = state
-        view?.presentScene(galaxyMap, transition: SKTransition.fade(withDuration: 0.8))
+        let roam = FreeRoamScene(size: size)
+        roam.scaleMode = .resizeFill
+        roam.gameState = state
+        view?.presentScene(roam, transition: SKTransition.fade(withDuration: 0.8))
     }
 
     func openSettings() {

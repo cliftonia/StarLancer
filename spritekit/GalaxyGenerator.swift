@@ -30,7 +30,9 @@ enum GalaxyGenerator {
             fuel: 100.0,
             minerals: 50,
             currentPlanetID: planets[0].id,
-            fleet: [ShipType.fighter.rawValue: 2]
+            fleet: [ShipType.fighter.rawValue: 2],
+            shipX: planets[0].positionX,
+            shipY: planets[0].positionY
         )
 
         return GameState(

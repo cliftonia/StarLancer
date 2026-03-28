@@ -72,31 +72,19 @@ extension GalaxyMapScene {
         let moveCamera = SKAction.move(to: cameraDestination, duration: travelDuration)
         moveCamera.timingMode = .easeInEaseOut
 
+        // Update ship world position for free-roam
+        gameState.player.shipX = planet.positionX
+        gameState.player.shipY = planet.positionY
+
         shipIcon.run(moveShip)
         cameraNode.run(moveCamera) { [weak self] in
             guard let self else { return }
-            self.isTravelAnimating = false
 
-            // Restart bob
-            let bob = SKAction.sequence([
-                SKAction.moveBy(x: 0, y: 3, duration: 1.0),
-                SKAction.moveBy(x: 0, y: -3, duration: 1.0)
-            ])
-            self.shipIcon.run(SKAction.repeatForever(bob))
-
-            self.updateHUD()
-            self.updateSelectionRing(planet.id)
-
-            // Enemy planets trigger combat, others show info
-            if planet.owner != .player && planet.owner != nil {
-                self.enterCombat(for: planet)
-            } else {
-                // Collect resources and refuel at owned planets
-                if planet.owner == .player {
-                    self.collectFromPlanet(planet)
-                }
-                self.showPlanetInfo(planet)
-            }
+            // Return to free-roam at destination
+            let roam = FreeRoamScene(size: self.size)
+            roam.scaleMode = .resizeFill
+            roam.gameState = self.gameState
+            self.view?.presentScene(roam, transition: SKTransition.fade(withDuration: 0.4))
         }
 
         // Dismiss info panel during travel
@@ -174,10 +162,11 @@ extension GalaxyMapScene {
 
         // Check HUD buttons first (in camera space)
         let hudNodes = cameraNode.nodes(at: locationInCamera)
-        for node in hudNodes where node.name == "menuButton" {
-            let menu = GameScene(size: size)
-            menu.scaleMode = .resizeFill
-            view?.presentScene(menu, transition: SKTransition.fade(withDuration: 0.6))
+        for node in hudNodes where node.name == "backToShipButton" {
+            let roam = FreeRoamScene(size: size)
+            roam.scaleMode = .resizeFill
+            roam.gameState = gameState
+            view?.presentScene(roam, transition: SKTransition.fade(withDuration: 0.4))
             return
         }
 

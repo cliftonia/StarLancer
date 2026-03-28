@@ -165,6 +165,10 @@ struct PlayerState: Codable, Hashable {
     var currentPlanetID: UUID?
     var fleet: [String: Int] // ShipType.rawValue -> count
 
+    // Ship world position for free-roam
+    var shipX: Double = 0
+    var shipY: Double = 0
+
     func shipCount(for type: ShipType) -> Int {
         fleet[type.rawValue] ?? 0
     }

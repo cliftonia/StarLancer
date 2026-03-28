@@ -113,8 +113,8 @@ extension GalaxyMapScene {
 
         // Bottom menu button
         let menuBtn = Theme.makeMenuButton(
-            text: "MAIN MENU",
-            name: "menuButton",
+            text: "BACK TO SHIP",
+            name: "backToShipButton",
             position: CGPoint(x: 0, y: -size.height * 0.5 + 40),
             accentColor: Theme.retroBlue
         )

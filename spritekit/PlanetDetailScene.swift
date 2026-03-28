@@ -380,9 +380,9 @@ class PlanetDetailScene: SKScene {
     // MARK: - Navigation
 
     private func navigateBack() {
-        let galaxyMap = GalaxyMapScene(size: size)
-        galaxyMap.scaleMode = .resizeFill
-        galaxyMap.gameState = gameState
-        view?.presentScene(galaxyMap, transition: SKTransition.fade(withDuration: 0.4))
+        let roam = FreeRoamScene(size: size)
+        roam.scaleMode = .resizeFill
+        roam.gameState = gameState
+        view?.presentScene(roam, transition: SKTransition.fade(withDuration: 0.4))
     }
 }
