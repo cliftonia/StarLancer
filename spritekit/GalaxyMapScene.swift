@@ -587,12 +587,17 @@ class GalaxyMapScene: SKScene {
 
             switch result {
             case .victory:
-                // Capture planet
-                if var p = self.gameState.planet(withID: planet.id) {
-                    p.owner = .player
-                    self.gameState.updatePlanet(p)
+                // Capture planet only if player has troop transports
+                let hasTransport = self.gameState.player.shipCount(for: .troopTransport) > 0
+                if hasTransport {
+                    if var p = self.gameState.planet(withID: planet.id) {
+                        p.owner = .player
+                        self.gameState.updatePlanet(p)
+                    }
+                    // Consume one troop transport
+                    self.gameState.player.removeShip(.troopTransport)
                 }
-                // Award rewards
+                // Award rewards regardless
                 self.gameState.player.credits += context.creditsReward
                 self.gameState.player.minerals += context.mineralsReward
 

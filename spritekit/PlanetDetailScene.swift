@@ -24,6 +24,7 @@ class PlanetDetailScene: SKScene {
         buildResourcePanel()
         buildBuildingsList()
         buildActionButtons()
+        buildFleetButton()
         buildBackButton()
     }
 
@@ -281,6 +282,21 @@ class PlanetDetailScene: SKScene {
         }
     }
 
+    // MARK: - Fleet Button
+
+    private func buildFleetButton() {
+        guard planet.owner == .player, planet.hasSpaceport else { return }
+
+        let btn = Theme.makeMenuButton(
+            text: "FLEET COMMAND",
+            name: "fleetButton",
+            position: CGPoint(x: size.width * 0.5, y: 120),
+            accentColor: Theme.warmGold
+        )
+        btn.zPosition = 30
+        addChild(btn)
+    }
+
     // MARK: - Back Button
 
     private func buildBackButton() {
@@ -309,6 +325,11 @@ class PlanetDetailScene: SKScene {
                 return
             }
 
+            if name == "fleetButton" {
+                openFleetManager()
+                return
+            }
+
             if name.hasPrefix("build_") {
                 let typeString = String(name.dropFirst(6))
                 guard let buildingType = BuildingType(rawValue: typeString) else { continue }
@@ -330,6 +351,16 @@ class PlanetDetailScene: SKScene {
         // Refresh the scene
         removeAllChildren()
         didMove(to: view!)
+    }
+
+    // MARK: - Fleet
+
+    private func openFleetManager() {
+        let fleet = FleetManagerScene(size: size)
+        fleet.scaleMode = .resizeFill
+        fleet.gameState = gameState
+        fleet.planetID = planetID
+        view?.presentScene(fleet, transition: SKTransition.fade(withDuration: 0.3))
     }
 
     // MARK: - Navigation

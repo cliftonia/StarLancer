@@ -46,6 +46,13 @@ class GameplayScene: SKScene, SKPhysicsContactDelegate {
     private var retreatButton: SKNode?
     private var isWaveBased: Bool { combatContext != nil }
 
+    // Fleet modifiers
+    private var fireRateMultiplier: Double = 1.0
+    private var bonusHP: Int = 0
+    private var hasTroopTransport: Bool = false
+    private var missileCarrierCount: Int = 0
+    private var missileTimer: TimeInterval = 0
+
     // MARK: - Game State
 
     private var playerShip: SKNode!
@@ -91,6 +98,9 @@ class GameplayScene: SKScene, SKPhysicsContactDelegate {
             totalWaves = ctx.waveCount
             currentWave = 0
         }
+
+        // Apply fleet modifiers
+        applyFleetModifiers()
 
         buildPlayer()
         buildHUD()
@@ -370,6 +380,78 @@ class GameplayScene: SKScene, SKPhysicsContactDelegate {
         scoreLabel?.text = "\(score)"
         creditsLabel?.text = "CR \(credits)"
         speedLabel?.text = String(format: "SPD %.1f", shipSpeed)
+    }
+
+    // MARK: - Fleet Modifiers
+
+    private func applyFleetModifiers() {
+        guard let state = gameState else { return }
+
+        let fighters = state.player.shipCount(for: .fighter)
+        let destroyers = state.player.shipCount(for: .destroyer)
+        let missiles = state.player.shipCount(for: .missileCarrier)
+        let transports = state.player.shipCount(for: .troopTransport)
+
+        // Fighters: each adds 15% fire rate
+        fireRateMultiplier = 1.0 / (1.0 + Double(fighters) * 0.15)
+
+        // Destroyers: each adds 20 HP
+        bonusHP = destroyers * 20
+        health += bonusHP
+
+        // Missile carriers: spawn homing missiles periodically
+        missileCarrierCount = missiles
+
+        // Troop transports: required for planet capture
+        hasTroopTransport = transports > 0
+    }
+
+    private func spawnHomingMissile() {
+        guard let ship = playerShip, !isGameOver else { return }
+
+        // Find nearest enemy
+        var nearestEnemy: SKNode?
+        var nearestDist = CGFloat.infinity
+
+        enumerateChildNodes(withName: "enemy") { node, _ in
+            let dist = hypot(node.position.x - ship.position.x, node.position.y - ship.position.y)
+            if dist < nearestDist {
+                nearestDist = dist
+                nearestEnemy = node
+            }
+        }
+
+        guard let target = nearestEnemy else { return }
+
+        let missile = SKShapeNode(circleOfRadius: 4)
+        missile.fillColor = Theme.warmGold
+        missile.strokeColor = .clear
+        missile.glowWidth = 6
+        missile.position = CGPoint(x: ship.position.x, y: ship.position.y + 20)
+        missile.zPosition = 9
+        missile.name = "bullet"
+
+        missile.physicsBody = SKPhysicsBody(circleOfRadius: 4)
+        missile.physicsBody?.categoryBitMask = Category.bullet
+        missile.physicsBody?.contactTestBitMask = Category.asteroid | Category.enemy
+        missile.physicsBody?.collisionBitMask = 0
+        missile.physicsBody?.isDynamic = true
+        missile.physicsBody?.linearDamping = 0
+
+        // Aim toward target
+        let dx = target.position.x - ship.position.x
+        let dy = target.position.y - ship.position.y
+        let dist = hypot(dx, dy)
+        let speed: CGFloat = 400
+        missile.physicsBody?.velocity = CGVector(dx: dx / dist * speed, dy: dy / dist * speed)
+
+        addChild(missile)
+
+        // Trail effect
+        missile.run(SKAction.sequence([
+            SKAction.wait(forDuration: 2.0),
+            SKAction.removeFromParent()
+        ]))
     }
 
     // MARK: - Wave HUD
@@ -1043,12 +1125,21 @@ class GameplayScene: SKScene, SKPhysicsContactDelegate {
         // Move ship with gyro + touch
         updatePlayerMovement(dt: dt)
 
-        // Auto-fire while touching
+        // Auto-fire while touching (fleet fighters increase rate)
         if isTouching {
-            // Rate limit firing
-            let fireRate = 0.2
+            let fireRate = 0.2 * fireRateMultiplier
             if currentTime.truncatingRemainder(dividingBy: fireRate) < dt {
                 fireBullet()
+            }
+        }
+
+        // Missile carriers fire homing missiles
+        if missileCarrierCount > 0 {
+            missileTimer += dt
+            let missileInterval = max(1.0, 3.0 / Double(missileCarrierCount))
+            if missileTimer > missileInterval {
+                missileTimer = 0
+                spawnHomingMissile()
             }
         }
 
