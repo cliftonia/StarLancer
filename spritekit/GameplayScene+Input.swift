@@ -258,6 +258,7 @@ extension GameplayScene {
         }
 
         updateHUD()
+        updateRadar()
     }
 
 }

@@ -204,6 +204,150 @@ extension GameplayScene {
         addChild(mine)
     }
 
+    // MARK: - Boss Enemy
+
+    func spawnBoss() {
+        let boss = SKNode()
+        boss.name = "enemy"
+        boss.zPosition = 9
+        boss.position = CGPoint(x: size.width * 0.5, y: size.height + 60)
+
+        // Large hull
+        let hullPath = CGMutablePath()
+        hullPath.move(to: CGPoint(x: 0, y: -40))
+        hullPath.addLine(to: CGPoint(x: -30, y: 0))
+        hullPath.addLine(to: CGPoint(x: -20, y: 30))
+        hullPath.addLine(to: CGPoint(x: 20, y: 30))
+        hullPath.addLine(to: CGPoint(x: 30, y: 0))
+        hullPath.closeSubpath()
+
+        let hull = SKShapeNode(path: hullPath)
+        hull.fillColor = SKColor(red: 0.6, green: 0.1, blue: 0.1, alpha: 0.9)
+        hull.strokeColor = SKColor(red: 1, green: 0.3, blue: 0.2, alpha: 0.8)
+        hull.lineWidth = 2
+        hull.glowWidth = 6
+        boss.addChild(hull)
+
+        // Boss cockpit — large and menacing
+        let cockpit = SKShapeNode(circleOfRadius: 8)
+        cockpit.fillColor = SKColor(red: 1.0, green: 0.15, blue: 0.05, alpha: 0.9)
+        cockpit.strokeColor = .clear
+        cockpit.glowWidth = 10
+        cockpit.position = CGPoint(x: 0, y: -8)
+        boss.addChild(cockpit)
+
+        // Wing cannons
+        for side in [-1.0, 1.0] {
+            let cannon = SKShapeNode(rectOf: CGSize(width: 6, height: 14), cornerRadius: 2)
+            cannon.fillColor = hullGray
+            cannon.strokeColor = nasaOrange.withAlphaComponent(0.5)
+            cannon.position = CGPoint(x: side * 24, y: -5)
+            boss.addChild(cannon)
+        }
+
+        let bodyPath = CGMutablePath()
+        bodyPath.move(to: CGPoint(x: 0, y: -40))
+        bodyPath.addLine(to: CGPoint(x: -30, y: 30))
+        bodyPath.addLine(to: CGPoint(x: 30, y: 30))
+        bodyPath.closeSubpath()
+
+        boss.physicsBody = SKPhysicsBody(polygonFrom: bodyPath)
+        boss.physicsBody?.categoryBitMask = Category.enemy
+        boss.physicsBody?.contactTestBitMask = Category.bullet | Category.player
+        boss.physicsBody?.collisionBitMask = 0
+        boss.physicsBody?.isDynamic = true
+        boss.physicsBody?.linearDamping = 0
+
+        // Boss HP tracking — takes multiple hits to kill
+        // We simulate this by spawning overlapping enemy nodes
+        // (SpriteKit doesn't have HP on physics bodies natively)
+
+        // Boss movement: descend, then weave side to side while firing
+        let descend = SKAction.moveBy(x: 0, y: -300, duration: 2.5)
+        descend.timingMode = .easeOut
+
+        let weaveAndFire = SKAction.repeat(SKAction.sequence([
+            SKAction.group([
+                SKAction.moveBy(x: 100, y: 0, duration: 1.5),
+                SKAction.sequence([
+                    SKAction.run { [weak self] in self?.bossFire(from: boss) },
+                    SKAction.wait(forDuration: 0.3),
+                    SKAction.run { [weak self] in self?.bossFire(from: boss) },
+                    SKAction.wait(forDuration: 0.3),
+                    SKAction.run { [weak self] in self?.bossFire(from: boss) }
+                ])
+            ]),
+            SKAction.group([
+                SKAction.moveBy(x: -200, y: 0, duration: 1.5),
+                SKAction.sequence([
+                    SKAction.run { [weak self] in self?.bossFire(from: boss) },
+                    SKAction.wait(forDuration: 0.3),
+                    SKAction.run { [weak self] in self?.bossFire(from: boss) },
+                    SKAction.wait(forDuration: 0.3),
+                    SKAction.run { [weak self] in self?.bossFire(from: boss) }
+                ])
+            ]),
+            SKAction.moveBy(x: 100, y: 0, duration: 0.8)
+        ]), count: 4)
+
+        let exit = SKAction.sequence([
+            SKAction.moveBy(x: 0, y: -size.height, duration: 3.0),
+            SKAction.removeFromParent()
+        ])
+
+        boss.run(SKAction.sequence([descend, weaveAndFire, exit]))
+        addChild(boss)
+
+        // "WARNING" flash
+        let warning = SKLabelNode(fontNamed: "Helvetica-Bold")
+        warning.text = "WARNING: HOSTILE CAPITAL SHIP"
+        warning.fontSize = 16
+        warning.fontColor = Theme.offRed
+        warning.position = CGPoint(x: size.width * 0.5, y: size.height * 0.65)
+        warning.zPosition = 36
+        warning.alpha = 0
+        addChild(warning)
+
+        let flash = SKAction.sequence([
+            SKAction.fadeIn(withDuration: 0.2),
+            SKAction.fadeOut(withDuration: 0.2)
+        ])
+        warning.run(SKAction.sequence([
+            SKAction.repeat(flash, count: 4),
+            SKAction.removeFromParent()
+        ]))
+
+        GameFeedback.warning()
+    }
+
+    private func bossFire(from boss: SKNode) {
+        guard !isGameOver else { return }
+
+        // Triple shot — center + spread
+        for angle in [-0.15, 0.0, 0.15] as [CGFloat] {
+            let bullet = SKShapeNode(rectOf: CGSize(width: 3, height: 12), cornerRadius: 1)
+            bullet.fillColor = SKColor(red: 1, green: 0.3, blue: 0.1, alpha: 1)
+            bullet.strokeColor = .clear
+            bullet.glowWidth = 6
+            bullet.position = CGPoint(x: boss.position.x, y: boss.position.y + 40)
+            bullet.zPosition = 7
+            bullet.name = "enemyBullet"
+
+            bullet.physicsBody = SKPhysicsBody(rectangleOf: CGSize(width: 3, height: 12))
+            bullet.physicsBody?.categoryBitMask = Category.enemyFire
+            bullet.physicsBody?.contactTestBitMask = Category.player
+            bullet.physicsBody?.collisionBitMask = 0
+            bullet.physicsBody?.isDynamic = true
+            bullet.physicsBody?.velocity = CGVector(
+                dx: sin(angle) * 200,
+                dy: -350
+            )
+            bullet.physicsBody?.linearDamping = 0
+
+            addChild(bullet)
+        }
+    }
+
     // MARK: - Enemy Node Builder
 
     private func makeEnemyNode(

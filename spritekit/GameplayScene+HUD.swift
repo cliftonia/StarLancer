@@ -180,6 +180,84 @@ extension GameplayScene {
         }
     }
 
+    // MARK: - Mini Radar
+
+    func buildMiniRadar() {
+        let radarSize: CGFloat = 70
+        let radarPos = CGPoint(x: size.width - radarSize * 0.5 - 12, y: radarSize * 0.5 + 60)
+
+        let bg = SKShapeNode(rectOf: CGSize(width: radarSize, height: radarSize), cornerRadius: 4)
+        bg.fillColor = SKColor.black.withAlphaComponent(0.5)
+        bg.strokeColor = hullGray.withAlphaComponent(0.3)
+        bg.lineWidth = 0.5
+        bg.position = radarPos
+        bg.zPosition = 38
+        bg.name = "radarBg"
+        addChild(bg)
+
+        let radarLabel = SKLabelNode(fontNamed: "Courier")
+        radarLabel.text = "RADAR"
+        radarLabel.fontSize = 6
+        radarLabel.fontColor = hullGray.withAlphaComponent(0.4)
+        radarLabel.position = CGPoint(x: radarPos.x, y: radarPos.y + radarSize * 0.5 + 4)
+        radarLabel.zPosition = 38
+        addChild(radarLabel)
+    }
+
+    func updateRadar() {
+        // Remove old dots
+        enumerateChildNodes(withName: "radarDot") { node, _ in
+            node.removeFromParent()
+        }
+
+        let radarSize: CGFloat = 70
+        let radarPos = CGPoint(x: size.width - radarSize * 0.5 - 12, y: radarSize * 0.5 + 60)
+        let scaleX = radarSize / size.width
+        let scaleY = radarSize / size.height
+
+        // Player dot (center reference)
+        if let ship = playerShip {
+            let dot = SKShapeNode(circleOfRadius: 2)
+            dot.fillColor = Theme.retroBlue
+            dot.strokeColor = .clear
+            dot.position = CGPoint(
+                x: radarPos.x + (ship.position.x - size.width * 0.5) * scaleX,
+                y: radarPos.y + (ship.position.y - size.height * 0.5) * scaleY
+            )
+            dot.zPosition = 39
+            dot.name = "radarDot"
+            addChild(dot)
+        }
+
+        // Enemy dots
+        enumerateChildNodes(withName: "enemy") { [self] node, _ in
+            let dot = SKShapeNode(circleOfRadius: 1.5)
+            dot.fillColor = Theme.offRed
+            dot.strokeColor = .clear
+            dot.position = CGPoint(
+                x: radarPos.x + (node.position.x - size.width * 0.5) * scaleX,
+                y: radarPos.y + (node.position.y - size.height * 0.5) * scaleY
+            )
+            dot.zPosition = 39
+            dot.name = "radarDot"
+            self.addChild(dot)
+        }
+
+        // Asteroid dots
+        enumerateChildNodes(withName: "asteroid") { [self] node, _ in
+            let dot = SKShapeNode(circleOfRadius: 1)
+            dot.fillColor = hullGray.withAlphaComponent(0.5)
+            dot.strokeColor = .clear
+            dot.position = CGPoint(
+                x: radarPos.x + (node.position.x - size.width * 0.5) * scaleX,
+                y: radarPos.y + (node.position.y - size.height * 0.5) * scaleY
+            )
+            dot.zPosition = 39
+            dot.name = "radarDot"
+            self.addChild(dot)
+        }
+    }
+
     func updateHUD() {
         healthLabel?.text = "HULL \(max(0, health))%"
         healthLabel?.fontColor = health <= 25 ? nasaOrange : creamWhite

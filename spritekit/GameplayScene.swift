@@ -119,6 +119,7 @@ class GameplayScene: SKScene, SKPhysicsContactDelegate {
 
         buildPlayer()
         buildHUD()
+        buildMiniRadar()
         buildWaveHUD()
         buildRetreatButton()
         buildPauseButton()

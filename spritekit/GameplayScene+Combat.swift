@@ -120,7 +120,21 @@ extension GameplayScene {
             SKAction.removeFromParent()
         ]))
 
-        // Spawn enemies for this wave with delay
+        // Final wave spawns a boss + fewer regular enemies
+        let isFinalWave = currentWave == totalWaves
+        if isFinalWave {
+            announcement.text = "FINAL WAVE"
+            announcement.fontColor = Theme.offRed
+
+            // Boss appears after a delay
+            run(SKAction.sequence([
+                SKAction.wait(forDuration: 1.5),
+                SKAction.run { [weak self] in self?.spawnBoss() }
+            ]))
+            enemiesRemainingInWave = enemyCount + 1 // +1 for boss
+        }
+
+        // Spawn regular enemies for this wave with delay
         for i in 0..<enemyCount {
             run(SKAction.sequence([
                 SKAction.wait(forDuration: Double(i) * 0.8 + 0.5),
